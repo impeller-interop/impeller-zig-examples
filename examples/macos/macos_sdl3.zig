@@ -19,7 +19,7 @@ pub fn main() !void {
     try sdl3.init(init_flags);
     defer sdl3.quit(init_flags);
 
-    const window = try sdl3.video.Window.init("zig-impeller Metal", 800, 600, .{
+    const window = try sdl3.video.Window.init("impeller-zig Metal", 800, 600, .{
         .metal = true,
         .high_pixel_density = true,
     });

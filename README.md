@@ -1,12 +1,12 @@
-# zig-impeller-examples
+# impeller-zig-examples
 
-Runnable SDL3 and GLFW examples for [`zig-impeller`](https://github.com/KercyDing/zig-impeller).
+Runnable SDL3 and GLFW examples for [`impeller-zig`](https://github.com/impeller-interop/impeller-zig).
 
 ## Dependencies
 
 This package depends on:
 
-- `zig_impeller`
+- `impeller_zig`
 - `sdl3`
 - `glfw_zig`
 

@@ -10,8 +10,8 @@
             .lazy = true,
         },
         .zig_impeller = .{
-            .url = "git+https://github.com/KercyDing/zig-impeller?ref=main#831244fa34e8af579d1a14203b5b65ebf66f4ba5",
-            .hash = "zig_impeller-0.0.1-EE9FH1wbAQCxd0oT4o-sjz-Vw2vyL1gFF2GIK6Vlj4L-",
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#5f894f4044099c0f02848e0737918c881a7e9e29",
+            .hash = "zig_impeller-0.0.1-EE9FH3gbAQCqnCT6iIfL8BihIjeqcMxZ7x9FE9I64n7O",
         },
         .sdl3 = .{
             .url = "git+https://codeberg.org/7Games/zig-sdl3?ref=master#40c2e4b579aa556db37a502c936426aa1c8b5c95",

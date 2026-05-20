@@ -26,7 +26,7 @@ pub fn main() !void {
     }
 
     glfw.glfwWindowHint(glfw.GLFW_CLIENT_API, glfw.GLFW_NO_API);
-    const window = glfw.glfwCreateWindow(800, 600, "zig-impeller Vulkan", null, null) orelse {
+    const window = glfw.glfwCreateWindow(800, 600, "impeller-zig Vulkan", null, null) orelse {
         return ExampleError.WindowCreateFailed;
     };
     defer glfw.glfwDestroyWindow(window);
