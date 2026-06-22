@@ -38,7 +38,7 @@ pub fn main() !void {
     var context = try impeller.Context.initMetal();
     defer context.deinit();
 
-    var scene = try draw.createScene(context, "macOS");
+    var scene = try draw.createScene(std.heap.page_allocator, context, "macOS");
     defer scene.deinit();
 
     while (glfw.glfwWindowShouldClose(window) == glfw.GLFW_FALSE) {

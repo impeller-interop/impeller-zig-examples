@@ -35,7 +35,7 @@ pub fn main() !void {
     var context = try impeller.Context.initMetal();
     defer context.deinit();
 
-    var scene = try draw.createScene(context, "macOS SDL3");
+    var scene = try draw.createScene(std.heap.page_allocator, context, "macOS SDL3");
     defer scene.deinit();
 
     var quit = false;

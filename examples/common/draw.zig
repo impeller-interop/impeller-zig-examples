@@ -1,20 +1,37 @@
 const std = @import("std");
 const impeller = @import("impeller");
 
+/// Owns the GPU resources required to render the shared example scene.
 pub const Scene = struct {
+    allocator: std.mem.Allocator,
+    // The binding registers a borrowed mapping without a release callback.
+    font_bytes: []u8,
     texture: impeller.Texture,
     display_list: impeller.DisplayList,
 
-    /// Releases the scene resources created for the example frame.
+    /// Releases GPU resources and retained font storage.
+    /// Args: `self` is the initialized scene. Returns: nothing.
+    /// Edge cases: call exactly once, after the final draw completes.
     pub fn deinit(self: *Scene) void {
         self.display_list.deinit();
         self.texture.deinit();
+        self.allocator.free(self.font_bytes);
     }
 };
 
-/// Creates the shared example scene for a platform backend.
-pub fn createScene(context: impeller.Context, platform_name: []const u8) !Scene {
-    const font_bytes = try loadFontBytes();
+/// Creates the shared example scene.
+/// Args: `allocator` backs retained font data; `context` creates GPU resources;
+/// `platform_name` is rendered in the sample paragraph.
+/// Returns: an owned scene or a file, allocation, or Impeller error.
+/// Edge cases: `allocator` and `context` must outlive the returned scene.
+pub fn createScene(
+    allocator: std.mem.Allocator,
+    context: impeller.Context,
+    platform_name: []const u8,
+) !Scene {
+    const font_bytes = try loadFontBytes(allocator);
+    errdefer allocator.free(font_bytes);
+
     var texture = try createCheckerTexture(context);
     errdefer texture.deinit();
 
@@ -22,15 +39,17 @@ pub fn createScene(context: impeller.Context, platform_name: []const u8) !Scene 
     errdefer display_list.deinit();
 
     return .{
+        .allocator = allocator,
+        .font_bytes = font_bytes,
         .texture = texture,
         .display_list = display_list,
     };
 }
 
-fn loadFontBytes() ![]const u8 {
+fn loadFontBytes(allocator: std.mem.Allocator) ![]u8 {
     const font_path = "examples/fonts/NotoSans-Regular.ttf";
     const io = std.Options.debug_io;
-    return try std.Io.Dir.cwd().readFileAlloc(io, font_path, std.heap.page_allocator, .limited(std.math.maxInt(usize)));
+    return std.Io.Dir.cwd().readFileAlloc(io, font_path, allocator, .limited(std.math.maxInt(usize)));
 }
 
 fn createCheckerTexture(context: impeller.Context) !impeller.Texture {
@@ -51,7 +70,6 @@ fn createCheckerTexture(context: impeller.Context) !impeller.Texture {
         impeller.mapping(texture_bytes[0..]),
     );
     errdefer texture.deinit();
-    texture.retain();
     return texture;
 }
 
@@ -76,8 +94,6 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
         impeller.texture_samplings.linear,
     );
     defer matrix_image_filter.deinit();
-    matrix_image_filter.retain();
-    defer matrix_image_filter.deinit();
 
     var composed_image_filter = try impeller.ImageFilter.initCompose(dilate_image_filter, erode_image_filter);
     defer composed_image_filter.deinit();
@@ -86,8 +102,6 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
         impeller.srgb(1.0, 0.0, 1.0, 0.55),
         impeller.blend_modes.source_atop,
     );
-    defer blend_color_filter.deinit();
-    blend_color_filter.retain();
     defer blend_color_filter.deinit();
 
     var grayscale_color_filter = try impeller.ColorFilter.initColorMatrix(impeller.colorMatrix(.{
@@ -99,8 +113,6 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
     defer grayscale_color_filter.deinit();
 
     var blur_mask_filter = try impeller.MaskFilter.initBlur(impeller.blur_styles.normal, 12.0);
-    defer blur_mask_filter.deinit();
-    blur_mask_filter.retain();
     defer blur_mask_filter.deinit();
 
     var reused_display_list = try createReusableDisplayList();
@@ -336,33 +348,39 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
         paint,
     );
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(1.0, 0.75, 0.2, 1.0));
-    paint.setColorFilter(grayscale_color_filter);
-    builder.drawRoundedRect(
-        impeller.rect(300.0, 430.0, 100.0, 56.0),
-        impeller.uniformRadii(16.0),
-        paint,
-    );
+    {
+        var grayscale_paint = try impeller.Paint.init();
+        defer grayscale_paint.deinit();
+        grayscale_paint.setColor(impeller.srgb(1.0, 0.75, 0.2, 1.0));
+        grayscale_paint.setColorFilter(grayscale_color_filter);
+        builder.drawRoundedRect(
+            impeller.rect(300.0, 430.0, 100.0, 56.0),
+            impeller.uniformRadii(16.0),
+            grayscale_paint,
+        );
+    }
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(0.9, 0.15, 0.15, 1.0));
-    paint.setMaskFilter(blur_mask_filter);
-    builder.drawPath(triangle_path, paint);
+    {
+        var mask_paint = try impeller.Paint.init();
+        defer mask_paint.deinit();
+        mask_paint.setColor(impeller.srgb(0.9, 0.15, 0.15, 1.0));
+        mask_paint.setMaskFilter(blur_mask_filter);
+        builder.drawPath(triangle_path, mask_paint);
+    }
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(0.15, 0.75, 0.9, 1.0));
-    paint.setImageFilter(matrix_image_filter);
-    builder.drawRoundedRectDifference(
-        impeller.rect(430.0, 430.0, 100.0, 56.0),
-        impeller.uniformRadii(16.0),
-        impeller.rect(448.0, 438.0, 28.0, 18.0),
-        impeller.uniformRadii(6.0),
-        paint,
-    );
+    {
+        var image_filter_paint = try impeller.Paint.init();
+        defer image_filter_paint.deinit();
+        image_filter_paint.setColor(impeller.srgb(0.15, 0.75, 0.9, 1.0));
+        image_filter_paint.setImageFilter(matrix_image_filter);
+        builder.drawRoundedRectDifference(
+            impeller.rect(430.0, 430.0, 100.0, 56.0),
+            impeller.uniformRadii(16.0),
+            impeller.rect(448.0, 438.0, 28.0, 18.0),
+            impeller.uniformRadii(6.0),
+            image_filter_paint,
+        );
+    }
 
     const gradient_colors = [_]impeller.Color{
         impeller.srgb(1.0, 0.25, 0.25, 1.0),
@@ -378,8 +396,6 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
         impeller.tile_modes.clamp,
         null,
     );
-    defer linear_gradient.deinit();
-    linear_gradient.retain();
     defer linear_gradient.deinit();
 
     var radial_gradient = try impeller.ColorSource.initRadialGradient(
@@ -401,59 +417,69 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
     );
     defer image_color_source.deinit();
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColorSource(linear_gradient);
-    builder.drawRoundedRect(
-        impeller.rect(40.0, 520.0, 100.0, 56.0),
-        impeller.uniformRadii(16.0),
-        paint,
-    );
+    {
+        var linear_gradient_paint = try impeller.Paint.init();
+        defer linear_gradient_paint.deinit();
+        linear_gradient_paint.setColorSource(linear_gradient);
+        builder.drawRoundedRect(
+            impeller.rect(40.0, 520.0, 100.0, 56.0),
+            impeller.uniformRadii(16.0),
+            linear_gradient_paint,
+        );
+    }
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColorSource(radial_gradient);
-    builder.drawOval(impeller.rect(180.0, 516.0, 100.0, 64.0), paint);
+    {
+        var radial_gradient_paint = try impeller.Paint.init();
+        defer radial_gradient_paint.deinit();
+        radial_gradient_paint.setColorSource(radial_gradient);
+        builder.drawOval(impeller.rect(180.0, 516.0, 100.0, 64.0), radial_gradient_paint);
+    }
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColorSource(image_color_source);
-    builder.drawRoundedRect(
-        impeller.rect(320.0, 520.0, 120.0, 56.0),
-        impeller.uniformRadii(16.0),
-        paint,
-    );
+    {
+        var image_source_paint = try impeller.Paint.init();
+        defer image_source_paint.deinit();
+        image_source_paint.setColorSource(image_color_source);
+        builder.drawRoundedRect(
+            impeller.rect(320.0, 520.0, 120.0, 56.0),
+            impeller.uniformRadii(16.0),
+            image_source_paint,
+        );
+    }
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(0.08, 0.08, 0.08, 1.0));
-    paint.setDrawStyle(impeller.draw_styles.stroke);
-    paint.setStrokeWidth(14.0);
-    paint.setStrokeCap(impeller.stroke_caps.round);
-    paint.setStrokeJoin(impeller.stroke_joins.round);
-    paint.setStrokeMiter(2.0);
-    builder.drawPath(arc_path, paint);
+    {
+        var arc_stroke_paint = try impeller.Paint.init();
+        defer arc_stroke_paint.deinit();
+        arc_stroke_paint.setColor(impeller.srgb(0.08, 0.08, 0.08, 1.0));
+        arc_stroke_paint.setDrawStyle(impeller.draw_styles.stroke);
+        arc_stroke_paint.setStrokeWidth(14.0);
+        arc_stroke_paint.setStrokeCap(impeller.stroke_caps.round);
+        arc_stroke_paint.setStrokeJoin(impeller.stroke_joins.round);
+        arc_stroke_paint.setStrokeMiter(2.0);
+        builder.drawPath(arc_path, arc_stroke_paint);
+    }
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(0.18, 0.18, 0.18, 1.0));
-    paint.setDrawStyle(impeller.draw_styles.stroke);
-    paint.setStrokeWidth(8.0);
-    paint.setStrokeCap(impeller.stroke_caps.round);
-    builder.drawLine(
-        impeller.point(470.0, 520.0),
-        impeller.point(560.0, 560.0),
-        paint,
-    );
+    {
+        var line_paint = try impeller.Paint.init();
+        defer line_paint.deinit();
+        line_paint.setColor(impeller.srgb(0.18, 0.18, 0.18, 1.0));
+        line_paint.setDrawStyle(impeller.draw_styles.stroke);
+        line_paint.setStrokeWidth(8.0);
+        line_paint.setStrokeCap(impeller.stroke_caps.round);
+        builder.drawLine(
+            impeller.point(470.0, 520.0),
+            impeller.point(560.0, 560.0),
+            line_paint,
+        );
 
-    paint.setColor(impeller.srgb(0.95, 0.3, 0.2, 1.0));
-    builder.drawDashedLine(
-        impeller.point(470.0, 560.0),
-        impeller.point(560.0, 520.0),
-        12.0,
-        8.0,
-        paint,
-    );
+        line_paint.setColor(impeller.srgb(0.95, 0.3, 0.2, 1.0));
+        builder.drawDashedLine(
+            impeller.point(470.0, 560.0),
+            impeller.point(560.0, 520.0),
+            12.0,
+            8.0,
+            line_paint,
+        );
+    }
 
     builder.drawShadow(
         rounded_rect_path,
@@ -463,26 +489,30 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
         1.0,
     );
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(0.92, 0.95, 1.0, 1.0));
-    builder.drawRoundedRect(
-        impeller.rect(580.0, 508.0, 190.0, 78.0),
-        impeller.uniformRadii(14.0),
-        paint,
-    );
+    {
+        var paragraph_background_paint = try impeller.Paint.init();
+        defer paragraph_background_paint.deinit();
+        paragraph_background_paint.setColor(impeller.srgb(0.92, 0.95, 1.0, 1.0));
+        builder.drawRoundedRect(
+            impeller.rect(580.0, 508.0, 190.0, 78.0),
+            impeller.uniformRadii(14.0),
+            paragraph_background_paint,
+        );
+    }
     builder.drawParagraph(paragraph, impeller.point(592.0, 522.0));
 
-    paint = try impeller.Paint.init();
-    defer paint.deinit();
-    paint.setColor(impeller.srgb(1.0, 1.0, 1.0, 1.0));
-    builder.drawTextureRect(
-        checker_texture,
-        impeller.rect(0.0, 0.0, 4.0, 4.0),
-        impeller.rect(688.0, 424.0, 72.0, 72.0),
-        impeller.texture_samplings.nearest_neighbor,
-        paint,
-    );
+    {
+        var texture_paint = try impeller.Paint.init();
+        defer texture_paint.deinit();
+        texture_paint.setColor(impeller.srgb(1.0, 1.0, 1.0, 1.0));
+        builder.drawTextureRect(
+            checker_texture,
+            impeller.rect(0.0, 0.0, 4.0, 4.0),
+            impeller.rect(688.0, 424.0, 72.0, 72.0),
+            impeller.texture_samplings.nearest_neighbor,
+            texture_paint,
+        );
+    }
 
     return builder.build();
 }
