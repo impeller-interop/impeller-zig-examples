@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) void {
     const os_tag = target.result.os.tag;
     const backend = b.option(Backend, "backend", "Window backend (sdl3, glfw)") orelse .sdl3;
 
-    const impeller_dep = b.dependency("zig_impeller", .{
+    const impeller_dep = b.dependency("impeller_zig", .{
         .target = target,
         .optimize = optimize,
     });
