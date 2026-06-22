@@ -56,7 +56,7 @@ pub fn main() !void {
     var swapchain = try impeller.VulkanSwapchain.init(context, @ptrCast(vulkan_surface));
     defer swapchain.deinit();
 
-    var scene = try draw.createScene(std.heap.page_allocator, context, "Linux");
+    var scene = try draw.createScene(context, "Linux");
     defer scene.deinit();
 
     while (glfw.glfwWindowShouldClose(window) == glfw.GLFW_FALSE) {

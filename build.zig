@@ -20,12 +20,19 @@ pub fn build(b: *std.Build) void {
     });
     const impeller_mod = impeller_dep.module("impeller");
 
+    const font_mod = b.createModule(.{
+        .root_source_file = b.path("examples/font.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const common_draw_mod = b.createModule(.{
         .root_source_file = b.path("examples/common/draw.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
             .{ .name = "impeller", .module = impeller_mod },
+            .{ .name = "font", .module = font_mod },
         },
     });
 

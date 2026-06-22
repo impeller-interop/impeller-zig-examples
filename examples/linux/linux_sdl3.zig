@@ -1,4 +1,3 @@
-const std = @import("std");
 const impeller = @import("impeller");
 const draw = @import("common_draw");
 const sdl3 = @import("sdl3");
@@ -46,7 +45,7 @@ pub fn main() !void {
     var swapchain = try impeller.VulkanSwapchain.init(context, @ptrCast(vulkan_surface.surface));
     defer swapchain.deinit();
 
-    var scene = try draw.createScene(std.heap.page_allocator, context, "Linux SDL3");
+    var scene = try draw.createScene(context, "Linux SDL3");
     defer scene.deinit();
 
     var quit = false;

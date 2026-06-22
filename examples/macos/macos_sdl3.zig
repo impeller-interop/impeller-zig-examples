@@ -1,4 +1,3 @@
-const std = @import("std");
 const impeller = @import("impeller");
 const draw = @import("common_draw");
 const sdl3 = @import("sdl3");
@@ -35,7 +34,7 @@ pub fn main() !void {
     var context = try impeller.Context.initMetal();
     defer context.deinit();
 
-    var scene = try draw.createScene(std.heap.page_allocator, context, "macOS SDL3");
+    var scene = try draw.createScene(context, "macOS SDL3");
     defer scene.deinit();
 
     var quit = false;

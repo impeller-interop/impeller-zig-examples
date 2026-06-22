@@ -1,79 +1,53 @@
-const std = @import("std");
 const impeller = @import("impeller");
+const font_bytes = @import("font").noto_sans;
 
 /// Owns the GPU resources required to render the shared example scene.
 pub const Scene = struct {
-    allocator: std.mem.Allocator,
-    // The binding registers a borrowed mapping without a release callback.
-    font_bytes: []u8,
     texture: impeller.Texture,
     display_list: impeller.DisplayList,
 
-    /// Releases GPU resources and retained font storage.
-    /// Args: `self` is the initialized scene. Returns: nothing.
-    /// Edge cases: call exactly once, after the final draw completes.
+    /// Releases all scene resources after the final draw completes.
     pub fn deinit(self: *Scene) void {
         self.display_list.deinit();
         self.texture.deinit();
-        self.allocator.free(self.font_bytes);
     }
 };
 
 /// Creates the shared example scene.
-/// Args: `allocator` backs retained font data; `context` creates GPU resources;
-/// `platform_name` is rendered in the sample paragraph.
-/// Returns: an owned scene or a file, allocation, or Impeller error.
-/// Edge cases: `allocator` and `context` must outlive the returned scene.
-pub fn createScene(
-    allocator: std.mem.Allocator,
-    context: impeller.Context,
-    platform_name: []const u8,
-) !Scene {
-    const font_bytes = try loadFontBytes(allocator);
-    errdefer allocator.free(font_bytes);
-
+/// The context must outlive the returned scene.
+pub fn createScene(context: impeller.Context, platform_name: []const u8) !Scene {
     var texture = try createCheckerTexture(context);
     errdefer texture.deinit();
 
-    const display_list = try createDisplayList(texture, font_bytes, platform_name);
+    const display_list = try createDisplayList(texture, platform_name);
     errdefer display_list.deinit();
 
     return .{
-        .allocator = allocator,
-        .font_bytes = font_bytes,
         .texture = texture,
         .display_list = display_list,
     };
 }
 
-fn loadFontBytes(allocator: std.mem.Allocator) ![]u8 {
-    const font_path = "examples/fonts/NotoSans-Regular.ttf";
-    const io = std.Options.debug_io;
-    return std.Io.Dir.cwd().readFileAlloc(io, font_path, allocator, .limited(std.math.maxInt(usize)));
-}
-
 fn createCheckerTexture(context: impeller.Context) !impeller.Texture {
-    var texture_bytes = [_]u8{
+    const texture_bytes = [_]u8{
         255, 0,   0,   255, 255, 255, 0,   255, 0,  255, 0,   255, 0,   0,   0,   255,
         255, 255, 255, 255, 255, 0,   255, 255, 0,  255, 255, 255, 255, 128, 0,   255,
         64,  64,  255, 255, 255, 64,  64,  255, 64, 255, 64,  255, 32,  32,  32,  255,
         0,   0,   255, 255, 255, 0,   128, 255, 0,  128, 255, 255, 255, 255, 255, 255,
     };
 
-    var texture = try impeller.Texture.initWithContents(
+    return impeller.Texture.initWithBytesCopy(
         context,
         impeller.textureDescriptor(
             impeller.pixel_formats.rgba8888,
             impeller.pixelSize(4, 4),
             1,
         ),
-        impeller.mapping(texture_bytes[0..]),
+        texture_bytes[0..],
     );
-    errdefer texture.deinit();
-    return texture;
 }
 
-fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, platform_name: []const u8) !impeller.DisplayList {
+fn createDisplayList(checker_texture: impeller.Texture, platform_name: []const u8) !impeller.DisplayList {
     var builder = try impeller.DisplayListBuilder.init(null);
     defer builder.deinit();
 
@@ -120,7 +94,7 @@ fn createDisplayList(checker_texture: impeller.Texture, font_bytes: []const u8, 
 
     var typography_context = try impeller.TypographyContext.init();
     defer typography_context.deinit();
-    try typography_context.registerFont(impeller.mapping(font_bytes), "Noto Sans");
+    try typography_context.registerFontBorrowed(font_bytes, "Noto Sans");
 
     var paragraph_foreground = try impeller.Paint.init();
     defer paragraph_foreground.deinit();
