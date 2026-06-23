@@ -96,8 +96,7 @@ pub fn build(b: *std.Build) void {
         .use_llvm = if (os_tag == .macos) null else true,
         .use_lld = if (os_tag == .macos) null else true,
     });
-
-    exe.root_module.linkLibrary(impeller_dep.artifact("impeller"));
+    exe.each_lib_rpath = false;
 
     switch (os_tag) {
         .macos => {
@@ -113,12 +112,22 @@ pub fn build(b: *std.Build) void {
             exe.root_module.linkFramework("AppKit", .{});
             exe.root_module.linkFramework("Metal", .{});
             exe.root_module.linkFramework("QuartzCore", .{});
+
+            exe.root_module.addRPathSpecial("@executable_path");
+
+            const dylib = b.addInstallBinFile(impeller_dep.namedLazyPath("impeller_library"), "libimpeller.dylib");
+            b.getInstallStep().dependOn(&dylib.step);
         },
         .linux => {
             exe.root_module.linkSystemLibrary("vulkan", .{});
             exe.root_module.linkSystemLibrary("dl", .{});
             exe.root_module.linkSystemLibrary("pthread", .{});
             exe.root_module.linkSystemLibrary("m", .{});
+
+            exe.root_module.addRPathSpecial("$ORIGIN");
+
+            const so = b.addInstallBinFile(impeller_dep.namedLazyPath("impeller_library"), "libimpeller.so");
+            b.getInstallStep().dependOn(&so.step);
         },
         .windows => {
             const dll = b.addInstallBinFile(impeller_dep.namedLazyPath("impeller_library"), "impeller.dll");
