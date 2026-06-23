@@ -5,18 +5,18 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .glfw_zig = .{
-            .url = "git+https://github.com/tiawl/glfw.zig?ref=zig-stable#32a093cd869a0694ca2c0306680f7c7bc5dcd0b9",
-            .hash = "glfw_zig-1.0.0-NrvYoyvRGQDgKTTvaAaJLZWQsL6AL5F8jGsBla2V275Y",
+            .url = "git+https://github.com/tiawl/glfw.zig?ref=stable#e0cf5f886dfe9d889ef273a4ea1b6088de7a34ed",
+            .hash = "glfw_zig-1.0.0-NrvYo47RGQCzBv1EUNFgKyjzVFLm8cLpu-HLTrpaI_x2",
             .lazy = true,
         },
         .sdl3 = .{
-            .url = "git+https://codeberg.org/7Games/zig-sdl3?ref=master#40c2e4b579aa556db37a502c936426aa1c8b5c95",
-            .hash = "sdl3-0.2.0-NmT1Q0mFJwBi9kZmArzh2rfJ_mFshydV0zPGULVlpACc",
+            .url = "git+https://codeberg.org/7Games/zig-sdl3?ref=master#e7bd25ebeb791a5ccc754ea606c95d3743534530",
+            .hash = "sdl3-0.2.1-NmT1Q1cQJwDO02ja_d7yXfv2mTs_jl2d3u1dx9Xa6wBt",
             .lazy = true,
         },
         .impeller_zig = .{
-            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#052c4de240861ddea0222c0e61dab48f2e245773",
-            .hash = "impeller_zig-0.0.1-GYR4WuikAQApreKwqRTRWyMe4sBFO8QPU1pZlvqXjELG",
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#57c976ee7768bbc1ae089d1a66c00ac829f5a728",
+            .hash = "impeller_zig-0.0.1-GYR4WuikAQBwZ7NE0Idg6jsug8hWjYIHaSXH7y2H2_mV",
         },
     },
     .paths = .{

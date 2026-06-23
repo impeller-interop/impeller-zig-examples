@@ -21,6 +21,7 @@ pub fn main() !void {
     const window = try sdl3.video.Window.init("impeller-zig Metal", 800, 600, .{
         .metal = true,
         .high_pixel_density = true,
+        .resizable = true,
     });
     defer window.deinit();
 
