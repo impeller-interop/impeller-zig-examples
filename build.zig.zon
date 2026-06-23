@@ -15,8 +15,8 @@
             .lazy = true,
         },
         .impeller_zig = .{
-            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#2941096d7b19f454b25e1212d452dcd6a5d5f096",
-            .hash = "impeller_zig-0.0.1-GYR4WpkqAQD0vyL3O-b_n1Ep_SNpHPy31h4xELpz2sTN",
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#538691ecc65eb520215fae976f79026e7db231a0",
+            .hash = "impeller_zig-0.0.1-GYR4WjuNAQA564c38K1zEVe0W6_cy7o3IDatozsoaCtq",
         },
     },
     .paths = .{

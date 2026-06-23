@@ -1,3 +1,4 @@
+const std = @import("std");
 const impeller = @import("impeller");
 const font_bytes = @import("font").noto_sans;
 
@@ -43,6 +44,7 @@ fn createCheckerTexture(context: impeller.Context) !impeller.Texture {
             impeller.pixelSize(4, 4),
             1,
         ),
+        std.heap.page_allocator,
         texture_bytes[0..],
     );
 }
