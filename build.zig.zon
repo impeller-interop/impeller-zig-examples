@@ -15,12 +15,12 @@
             .lazy = true,
         },
         .impeller_zig = .{
-            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#f7f59441fe1377994e1a662ac907a253a4f1ef5d",
-            .hash = "impeller_zig-0.0.1-GYR4Wk2NAQApOxs8Kd3JIOvGvnLg2ppona0ngazV3XnL",
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#052c4de240861ddea0222c0e61dab48f2e245773",
+            .hash = "impeller_zig-0.0.1-GYR4WuikAQApreKwqRTRWyMe4sBFO8QPU1pZlvqXjELG",
         },
     },
     .paths = .{
         "build.zig",
-        "examples",
+        "src",
     },
 }

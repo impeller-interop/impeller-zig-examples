@@ -1,4 +1,5 @@
 const std = @import("std");
+const impeller_pkg = @import("impeller_zig");
 
 const Backend = enum { glfw, sdl3 };
 
@@ -21,13 +22,13 @@ pub fn build(b: *std.Build) void {
     const impeller_mod = impeller_dep.module("impeller");
 
     const font_mod = b.createModule(.{
-        .root_source_file = b.path("examples/font.zig"),
+        .root_source_file = b.path("src/font.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const common_draw_mod = b.createModule(.{
-        .root_source_file = b.path("examples/common/draw.zig"),
+    const draw_mod = b.createModule(.{
+        .root_source_file = b.path("src/draw.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -38,15 +39,15 @@ pub fn build(b: *std.Build) void {
 
     const example_info: ExampleInfo = switch (backend) {
         .glfw => switch (os_tag) {
-            .linux => .{ .name = "linux-glfw", .src = "examples/linux/linux_glfw.zig" },
-            .macos => .{ .name = "macos-glfw", .src = "examples/macos/macos_glfw.zig" },
-            .windows => .{ .name = "windows-glfw", .src = "examples/windows/windows_glfw.zig" },
+            .linux => .{ .name = "linux-glfw", .src = "src/linux/linux_glfw.zig" },
+            .macos => .{ .name = "macos-glfw", .src = "src/macos/macos_glfw.zig" },
+            .windows => .{ .name = "windows-glfw", .src = "src/windows/windows_glfw.zig" },
             else => @panic("Unsupported OS for GLFW examples"),
         },
         .sdl3 => switch (os_tag) {
-            .linux => .{ .name = "linux-sdl3", .src = "examples/linux/linux_sdl3.zig" },
-            .macos => .{ .name = "macos-sdl3", .src = "examples/macos/macos_sdl3.zig" },
-            .windows => .{ .name = "windows-sdl3", .src = "examples/windows/windows_sdl3.zig" },
+            .linux => .{ .name = "linux-sdl3", .src = "src/linux/linux_sdl3.zig" },
+            .macos => .{ .name = "macos-sdl3", .src = "src/macos/macos_sdl3.zig" },
+            .windows => .{ .name = "windows-sdl3", .src = "src/windows/windows_sdl3.zig" },
             else => @panic("Unsupported OS for SDL3 examples"),
         },
     };
@@ -58,7 +59,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe_mod.addImport("impeller", impeller_mod);
-    exe_mod.addImport("common_draw", common_draw_mod);
+    exe_mod.addImport("draw", draw_mod);
 
     switch (backend) {
         .glfw => {
@@ -98,11 +99,13 @@ pub fn build(b: *std.Build) void {
     });
     exe.each_lib_rpath = false;
 
+    impeller_pkg.linkRuntime(exe, impeller_dep);
+
     switch (os_tag) {
         .macos => {
             const metal_file = switch (backend) {
-                .glfw => "examples/macos/macos_glfw_metal.m",
-                .sdl3 => "examples/macos/macos_sdl3_metal.m",
+                .glfw => "src/macos/macos_glfw_metal.m",
+                .sdl3 => "src/macos/macos_sdl3_metal.m",
             };
             exe.root_module.addCSourceFile(.{
                 .file = b.path(metal_file),
@@ -115,8 +118,10 @@ pub fn build(b: *std.Build) void {
 
             exe.root_module.addRPathSpecial("@executable_path");
 
-            const dylib = b.addInstallBinFile(impeller_dep.namedLazyPath("impeller_library"), "libimpeller.dylib");
-            b.getInstallStep().dependOn(&dylib.step);
+            b.getInstallStep().dependOn(impeller_pkg.installRuntime(.{
+                .compile_step = exe,
+                .dependency = impeller_dep,
+            }));
         },
         .linux => {
             exe.root_module.linkSystemLibrary("vulkan", .{});
@@ -126,12 +131,16 @@ pub fn build(b: *std.Build) void {
 
             exe.root_module.addRPathSpecial("$ORIGIN");
 
-            const so = b.addInstallBinFile(impeller_dep.namedLazyPath("impeller_library"), "libimpeller.so");
-            b.getInstallStep().dependOn(&so.step);
+            b.getInstallStep().dependOn(impeller_pkg.installRuntime(.{
+                .compile_step = exe,
+                .dependency = impeller_dep,
+            }));
         },
         .windows => {
-            const dll = b.addInstallBinFile(impeller_dep.namedLazyPath("impeller_library"), "impeller.dll");
-            b.getInstallStep().dependOn(&dll.step);
+            b.getInstallStep().dependOn(impeller_pkg.installRuntime(.{
+                .compile_step = exe,
+                .dependency = impeller_dep,
+            }));
         },
         else => {},
     }

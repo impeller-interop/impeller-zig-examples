@@ -1,5 +1,5 @@
 const impeller = @import("impeller");
-const draw = @import("common_draw");
+const draw = @import("draw");
 const sdl3 = @import("sdl3");
 
 const ExampleError = error{
@@ -9,8 +9,6 @@ const ExampleError = error{
 
 pub fn main() !void {
     defer sdl3.shutdown();
-
-    try sdl3.hints.setWithPriority(.video_driver, "x11", .override);
 
     const init_flags = sdl3.InitFlags{ .video = true };
     try sdl3.init(init_flags);
@@ -45,7 +43,7 @@ pub fn main() !void {
     var swapchain = try impeller.VulkanSwapchain.init(context, @ptrCast(vulkan_surface.surface));
     defer swapchain.deinit();
 
-    var scene = try draw.createScene(context, "Linux SDL3");
+    var scene = try draw.createScene(context, "Windows SDL3");
     defer scene.deinit();
 
     var quit = false;

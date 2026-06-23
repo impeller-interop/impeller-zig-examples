@@ -1,5 +1,5 @@
 const impeller = @import("impeller");
-const draw = @import("common_draw");
+const draw = @import("draw");
 const sdl3 = @import("sdl3");
 
 extern fn macosSdl3ConfigureMetalLayer(layer: ?*anyopaque) ?*anyopaque;

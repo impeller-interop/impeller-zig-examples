@@ -1,6 +1,6 @@
 const std = @import("std");
 const impeller = @import("impeller");
-const draw = @import("common_draw");
+const draw = @import("draw");
 const glfw = @import("glfw_c");
 
 const ExampleError = error{
