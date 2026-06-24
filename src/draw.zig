@@ -2,6 +2,9 @@ const std = @import("std");
 const impeller = @import("impeller");
 const font_bytes = @import("font").noto_sans;
 
+pub const canvas_width = 800;
+pub const canvas_height = 600;
+
 /// Owns the GPU resources required to render the shared example scene.
 pub const Scene = struct {
     texture: impeller.Texture,
@@ -12,6 +15,11 @@ pub const Scene = struct {
         self.display_list.deinit();
         self.texture.deinit();
     }
+};
+
+pub const SurfaceSize = struct {
+    width: usize,
+    height: usize,
 };
 
 /// Creates the shared example scene.
@@ -27,6 +35,17 @@ pub fn createScene(context: impeller.Context, platform_name: []const u8) !Scene 
         .texture = texture,
         .display_list = display_list,
     };
+}
+
+/// Draws the example scene scaled to the full target surface.
+pub fn drawScene(surface: impeller.Surface, scene: Scene, surface_size: SurfaceSize) !void {
+    std.debug.assert(surface_size.width > 0);
+    std.debug.assert(surface_size.height > 0);
+
+    var display_list = try createFrameDisplayList(scene.display_list, surface_size);
+    defer display_list.deinit();
+
+    try surface.draw(display_list);
 }
 
 fn createCheckerTexture(context: impeller.Context) !impeller.Texture {
@@ -47,6 +66,29 @@ fn createCheckerTexture(context: impeller.Context) !impeller.Texture {
         std.heap.page_allocator,
         texture_bytes[0..],
     );
+}
+
+fn createFrameDisplayList(
+    scene_display_list: impeller.DisplayList,
+    surface_size: SurfaceSize,
+) !impeller.DisplayList {
+    const width: f32 = @floatFromInt(surface_size.width);
+    const height: f32 = @floatFromInt(surface_size.height);
+
+    var builder = try impeller.DisplayListBuilder.init(impeller.rect(0.0, 0.0, width, height));
+    defer builder.deinit();
+
+    var background = try impeller.Paint.init();
+    defer background.deinit();
+    background.setColor(impeller.srgb(1.0, 1.0, 1.0, 1.0));
+    builder.drawPaint(background);
+
+    builder.save();
+    builder.scale(width / @as(f32, @floatFromInt(canvas_width)), height / @as(f32, @floatFromInt(canvas_height)));
+    builder.drawDisplayList(scene_display_list, 1.0);
+    builder.restore();
+
+    return builder.build();
 }
 
 fn createDisplayList(checker_texture: impeller.Texture, platform_name: []const u8) !impeller.DisplayList {
@@ -111,8 +153,7 @@ fn createDisplayList(checker_texture: impeller.Texture, platform_name: []const u
     paragraph_style.setTextAlignment(impeller.text_alignments.left);
     paragraph_style.setTextDirection(impeller.text_directions.ltr);
     paragraph_style.setHeight(1.1);
-    paragraph_style.setMaxLines(2);
-    paragraph_style.setEllipsis("...");
+    paragraph_style.setMaxLines(3);
 
     var paragraph_builder = try impeller.ParagraphBuilder.init(typography_context);
     defer paragraph_builder.deinit();

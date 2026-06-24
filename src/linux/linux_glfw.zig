@@ -26,7 +26,14 @@ pub fn main() !void {
     }
 
     glfw.glfwWindowHint(glfw.GLFW_CLIENT_API, glfw.GLFW_NO_API);
-    const window = glfw.glfwCreateWindow(800, 600, "impeller-zig Vulkan", null, null) orelse {
+    const window_size = initialWindowSize();
+    const window = glfw.glfwCreateWindow(
+        window_size.width,
+        window_size.height,
+        "impeller-zig Vulkan",
+        null,
+        null,
+    ) orelse {
         return ExampleError.WindowCreateFailed;
     };
     defer glfw.glfwDestroyWindow(window);
@@ -66,16 +73,38 @@ pub fn main() !void {
             glfw.glfwSetWindowShouldClose(window, glfw.GLFW_TRUE);
         }
 
+        var fb_width: c_int = 0;
+        var fb_height: c_int = 0;
+        glfw.glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        if (fb_width <= 0 or fb_height <= 0) {
+            continue;
+        }
+
         var surface = swapchain.acquireNextSurface() catch continue;
         defer surface.deinit();
 
-        try surface.draw(scene.display_list);
+        try draw.drawScene(surface, scene, .{
+            .width = @intCast(fb_width),
+            .height = @intCast(fb_height),
+        });
         try surface.present();
     }
 }
 
 fn configureGlfwPlatform() void {
     glfw.glfwInitHint(glfw.GLFW_PLATFORM, glfw.GLFW_PLATFORM_X11);
+}
+
+const WindowSize = struct {
+    width: c_int,
+    height: c_int,
+};
+
+fn initialWindowSize() WindowSize {
+    return .{
+        .width = draw.canvas_width,
+        .height = draw.canvas_height,
+    };
 }
 
 const VulkanProcResolver = struct {

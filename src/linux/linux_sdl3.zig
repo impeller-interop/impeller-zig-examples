@@ -16,9 +16,11 @@ pub fn main() !void {
     try sdl3.init(init_flags);
     defer sdl3.quit(init_flags);
 
-    const window = try sdl3.video.Window.init("impeller-zig Vulkan", 800, 600, .{
+    const window_size = try initialWindowSize();
+    const window = try sdl3.video.Window.init("impeller-zig Vulkan", window_size.width, window_size.height, .{
         .vulkan = true,
         .resizable = true,
+        .high_pixel_density = true,
     });
     defer window.deinit();
 
@@ -65,12 +67,34 @@ pub fn main() !void {
             }
         }
 
+        var width: c_int = 0;
+        var height: c_int = 0;
+        _ = sdl3.c.SDL_GetWindowSizeInPixels(window.value, &width, &height);
+        if (width <= 0 or height <= 0) {
+            continue;
+        }
+
         var surface = swapchain.acquireNextSurface() catch continue;
         defer surface.deinit();
 
-        try surface.draw(scene.display_list);
+        try draw.drawScene(surface, scene, .{
+            .width = @intCast(width),
+            .height = @intCast(height),
+        });
         try surface.present();
     }
+}
+
+const WindowSize = struct {
+    width: usize,
+    height: usize,
+};
+
+fn initialWindowSize() !WindowSize {
+    return .{
+        .width = draw.canvas_width,
+        .height = draw.canvas_height,
+    };
 }
 
 const VulkanProcResolver = struct {

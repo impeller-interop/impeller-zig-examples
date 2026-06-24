@@ -27,7 +27,14 @@ pub fn main() !void {
 
     glfw.glfwWindowHint(glfw.GLFW_CLIENT_API, glfw.GLFW_NO_API);
     glfw.glfwWindowHint(glfw.GLFW_COCOA_RETINA_FRAMEBUFFER, glfw.GLFW_TRUE);
-    const window = glfw.glfwCreateWindow(800, 600, "impeller-zig Metal", null, null) orelse {
+    const window_size = initialWindowSize();
+    const window = glfw.glfwCreateWindow(
+        window_size.width,
+        window_size.height,
+        "impeller-zig Metal",
+        null,
+        null,
+    ) orelse {
         return ExampleError.WindowCreateFailed;
     };
     defer glfw.glfwDestroyWindow(window);
@@ -51,6 +58,9 @@ pub fn main() !void {
         var fb_width: c_int = 0;
         var fb_height: c_int = 0;
         glfw.glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        if (fb_width <= 0 or fb_height <= 0) {
+            continue;
+        }
 
         const drawable = macosGlfwAcquireNextDrawable(
             metal_layer,
@@ -62,9 +72,24 @@ pub fn main() !void {
         var surface = try impeller.Surface.wrapMetalDrawable(context, drawable);
         defer surface.deinit();
 
-        try surface.draw(scene.display_list);
+        try draw.drawScene(surface, scene, .{
+            .width = @intCast(fb_width),
+            .height = @intCast(fb_height),
+        });
         try surface.present();
     }
+}
+
+const WindowSize = struct {
+    width: c_int,
+    height: c_int,
+};
+
+fn initialWindowSize() WindowSize {
+    return .{
+        .width = draw.canvas_width,
+        .height = draw.canvas_height,
+    };
 }
 
 fn glfwErrorCallback(code: c_int, description: [*c]const u8) callconv(.c) void {
