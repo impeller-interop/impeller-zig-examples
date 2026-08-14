@@ -13,11 +13,12 @@ run-shader():
 
 # Build Metal+Vulkan Shader
 shader(name="planet"):
-    impellerc --runtime-stage-metal --runtime-stage-vulkan --input=src/shaders/{{name}}.frag --input-type=frag --sl=src/shaders/{{name}}.iplr --spirv=/tmp/impeller-zig-examples-{{name}}.spv --iplr --verbose
+    mkdir -p .zig-cache/tmp
+    impellerc --runtime-stage-metal --runtime-stage-vulkan --input=src/shaders/{{name}}.frag --input-type=frag --sl=src/shaders/{{name}}.iplr --spirv=.zig-cache/tmp/{{name}}.spv --iplr --verbose
     echo 'Done.'
 
 # Format
-format():
+fmt():
     zig fmt src build.zig build.zig.zon
     echo 'Done.'
 
