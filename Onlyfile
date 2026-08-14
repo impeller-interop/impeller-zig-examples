@@ -1,0 +1,32 @@
+# Build Regular + Shader Examples
+build(backend="sdl3"):
+    zig build -Dbackend={{backend}}
+    echo 'Done.'
+
+# Run Regular Example
+run(backend="sdl3"):
+    zig build run -Dbackend={{backend}}
+
+# Run Shader Example (SDL3)
+run-shader():
+    zig build run-shader
+
+# Build Metal+Vulkan Shader
+shader(name="planet"):
+    impellerc --runtime-stage-metal --runtime-stage-vulkan --input=src/shaders/{{name}}.frag --input-type=frag --sl=src/shaders/{{name}}.iplr --spirv=/tmp/impeller-zig-examples-{{name}}.spv --iplr --verbose
+    echo 'Done.'
+
+# Format
+format():
+    zig fmt src build.zig build.zig.zon
+    echo 'Done.'
+
+# Clean Cache, Output
+clean():
+    rm -rf .zig-cache zig-out
+    echo 'Done.'
+
+# Release Build
+release(backend="sdl3"):
+    zig build -Dbackend={{backend}} -Doptimize=ReleaseSafe
+    echo 'Done.'
