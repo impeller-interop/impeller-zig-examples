@@ -40,7 +40,7 @@ pub fn main() !void {
     var context = try impeller.Context.initVulkan(.{
         .user_data = null,
         .proc_address_callback = VulkanProcResolver.resolve,
-        .enable_vulkan_validation = false,
+        .enable_validation = false,
     });
     defer context.deinit();
 
