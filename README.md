@@ -82,4 +82,6 @@ Supported Impeller SDK targets:
 | Windows x64 | `x86_64-windows-gnu` |
 | Windows arm64 | `aarch64-windows-gnu` |
 
-These examples also build SDL3/GLFW and platform windowing code, so not every SDK target can be cross compiled from every host. macOS targets need Apple's SDK/frameworks, and Linux arm64 currently needs extra windowing cross-build support.
+Cross-compilation depends on the window backend.
+
+macOS targets require Apple's SDK/frameworks. GLFW currently cannot target Linux arm64 from a Linux x64 host.
