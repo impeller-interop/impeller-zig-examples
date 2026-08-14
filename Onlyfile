@@ -29,5 +29,5 @@ clean():
 
 # Release Build
 release(backend="sdl3"):
-    zig build -Dbackend={{backend}} -Doptimize=ReleaseSafe
+    zig build -Dbackend={{backend}} -Doptimize=ReleaseFast -Dstrip=true
     echo 'Done.'

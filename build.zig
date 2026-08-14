@@ -11,6 +11,7 @@ const ExampleInfo = struct {
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const strip = b.option(bool, "strip", "Strip debug symbols") orelse false;
 
     const os_tag = target.result.os.tag;
     const backend = b.option(Backend, "backend", "Window backend (sdl3, glfw)") orelse .sdl3;
@@ -69,6 +70,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path(shader_info.src),
         .target = target,
         .optimize = optimize,
+        .strip = strip,
     });
 
     exe_mod.addImport("impeller", impeller_mod);
