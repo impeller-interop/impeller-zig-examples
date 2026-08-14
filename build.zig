@@ -15,6 +15,28 @@ pub fn build(b: *std.Build) void {
     const os_tag = target.result.os.tag;
     const backend = b.option(Backend, "backend", "Window backend (sdl3, glfw)") orelse .sdl3;
 
+    const example_info: ExampleInfo = switch (backend) {
+        .glfw => switch (os_tag) {
+            .linux => .{ .name = "linux-glfw", .src = "src/linux/linux_glfw.zig" },
+            .macos => .{ .name = "macos-glfw", .src = "src/macos/macos_glfw.zig" },
+            .windows => .{ .name = "windows-glfw", .src = "src/windows/windows_glfw.zig" },
+            else => @panic("Unsupported OS for GLFW examples"),
+        },
+        .sdl3 => switch (os_tag) {
+            .linux => .{ .name = "linux-sdl3", .src = "src/linux/linux_sdl3.zig" },
+            .macos => .{ .name = "macos-sdl3", .src = "src/macos/macos_sdl3.zig" },
+            .windows => .{ .name = "windows-sdl3", .src = "src/windows/windows_sdl3.zig" },
+            else => @panic("Unsupported OS for SDL3 examples"),
+        },
+    };
+
+    const shader_info: ExampleInfo = switch (os_tag) {
+        .linux => .{ .name = "linux-shader", .src = "src/linux/linux_shader.zig" },
+        .macos => .{ .name = "macos-shader", .src = "src/macos/macos_shader.zig" },
+        .windows => .{ .name = "windows-shader", .src = "src/windows/windows_shader.zig" },
+        else => @panic("Unsupported OS for shader example"),
+    };
+
     const impeller_dep = b.dependency("impeller_zig", .{
         .target = target,
         .optimize = optimize,
@@ -37,29 +59,27 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const example_info: ExampleInfo = switch (backend) {
-        .glfw => switch (os_tag) {
-            .linux => .{ .name = "linux-glfw", .src = "src/linux/linux_glfw.zig" },
-            .macos => .{ .name = "macos-glfw", .src = "src/macos/macos_glfw.zig" },
-            .windows => .{ .name = "windows-glfw", .src = "src/windows/windows_glfw.zig" },
-            else => @panic("Unsupported OS for GLFW examples"),
-        },
-        .sdl3 => switch (os_tag) {
-            .linux => .{ .name = "linux-sdl3", .src = "src/linux/linux_sdl3.zig" },
-            .macos => .{ .name = "macos-sdl3", .src = "src/macos/macos_sdl3.zig" },
-            .windows => .{ .name = "windows-sdl3", .src = "src/windows/windows_sdl3.zig" },
-            else => @panic("Unsupported OS for SDL3 examples"),
-        },
-    };
-
     const exe_mod = b.createModule(.{
         .root_source_file = b.path(example_info.src),
         .target = target,
         .optimize = optimize,
     });
 
+    const shader_mod = b.createModule(.{
+        .root_source_file = b.path(shader_info.src),
+        .target = target,
+        .optimize = optimize,
+    });
+
     exe_mod.addImport("impeller", impeller_mod);
     exe_mod.addImport("draw", draw_mod);
+    shader_mod.addImport("impeller", impeller_mod);
+    shader_mod.addAnonymousImport("draw", .{
+        .root_source_file = b.path("src/shaders/draw.zig"),
+        .imports = &.{
+            .{ .name = "impeller", .module = impeller_mod },
+        },
+    });
 
     switch (backend) {
         .glfw => {
@@ -76,6 +96,7 @@ pub fn build(b: *std.Build) void {
             });
             if (os_tag == .linux or os_tag == .windows) {
                 glfw_translate.defineCMacro("GLFW_INCLUDE_VULKAN", null);
+                glfw_translate.defineCMacro("GLFW_INCLUDE_NONE", null);
                 glfw_translate.addIncludePath(glfw_lib.getEmittedIncludeTree());
             }
 
@@ -91,13 +112,28 @@ pub fn build(b: *std.Build) void {
         },
     }
 
+    const shader_sdl3_dep = b.lazyDependency("sdl3", .{
+        .target = target,
+        .optimize = optimize,
+    }) orelse return;
+    shader_mod.addImport("sdl3", shader_sdl3_dep.module("sdl3"));
+
     const exe = b.addExecutable(.{
         .name = example_info.name,
         .root_module = exe_mod,
         .use_llvm = if (os_tag == .macos) null else true,
         .use_lld = if (os_tag == .macos) null else true,
     });
+
+    const shader_exe = b.addExecutable(.{
+        .name = shader_info.name,
+        .root_module = shader_mod,
+        .use_llvm = if (os_tag == .macos) null else true,
+        .use_lld = if (os_tag == .macos) null else true,
+    });
+
     exe.each_lib_rpath = false;
+    shader_exe.each_lib_rpath = false;
 
     impeller_pkg.linkRuntime(exe, impeller_dep);
     const runtime_install = impeller_pkg.installRuntime(.{
@@ -124,7 +160,6 @@ pub fn build(b: *std.Build) void {
             exe.root_module.addRPathSpecial("@executable_path");
         },
         .linux => {
-            exe.root_module.linkSystemLibrary("vulkan", .{});
             exe.root_module.linkSystemLibrary("dl", .{});
             exe.root_module.linkSystemLibrary("pthread", .{});
             exe.root_module.linkSystemLibrary("m", .{});
@@ -146,44 +181,6 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the selected example");
     run_step.dependOn(&run_cmd.step);
 
-    const shader_draw_mod = b.createModule(.{
-        .root_source_file = b.path("src/shaders/draw.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "impeller", .module = impeller_mod },
-            .{ .name = "font", .module = font_mod },
-        },
-    });
-
-    const shader_info: ExampleInfo = switch (os_tag) {
-        .linux => .{ .name = "linux-shader", .src = "src/linux/linux_shader.zig" },
-        .macos => .{ .name = "macos-shader", .src = "src/macos/macos_shader.zig" },
-        .windows => .{ .name = "windows-shader", .src = "src/windows/windows_shader.zig" },
-        else => @panic("Unsupported OS for shader example"),
-    };
-
-    const shader_mod = b.createModule(.{
-        .root_source_file = b.path(shader_info.src),
-        .target = target,
-        .optimize = optimize,
-    });
-    shader_mod.addImport("impeller", impeller_mod);
-    shader_mod.addImport("draw", shader_draw_mod);
-
-    const shader_sdl3_dep = b.lazyDependency("sdl3", .{
-        .target = target,
-        .optimize = optimize,
-    }) orelse return;
-    shader_mod.addImport("sdl3", shader_sdl3_dep.module("sdl3"));
-
-    const shader_exe = b.addExecutable(.{
-        .name = shader_info.name,
-        .root_module = shader_mod,
-        .use_llvm = if (os_tag == .macos) null else true,
-        .use_lld = if (os_tag == .macos) null else true,
-    });
-    shader_exe.each_lib_rpath = false;
     impeller_pkg.linkRuntime(shader_exe, impeller_dep);
 
     switch (os_tag) {
@@ -199,7 +196,6 @@ pub fn build(b: *std.Build) void {
             shader_exe.root_module.addRPathSpecial("@executable_path");
         },
         .linux => {
-            shader_exe.root_module.linkSystemLibrary("vulkan", .{});
             shader_exe.root_module.linkSystemLibrary("dl", .{});
             shader_exe.root_module.linkSystemLibrary("pthread", .{});
             shader_exe.root_module.linkSystemLibrary("m", .{});
