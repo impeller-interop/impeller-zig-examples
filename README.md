@@ -2,31 +2,59 @@
 
 Runnable SDL3 and GLFW examples for [`impeller-zig`](https://github.com/impeller-interop/impeller-zig).
 
-## Dependencies
+## Prerequisites
 
-This package depends on:
+Install [Zig](https://ziglang.org/download/) `0.16.0` directly, or use [mise](https://github.com/jdx/mise) to install the toolchain pinned by this repository:
 
-- `impeller_zig`
-- `sdl3`
-- `glfw_zig`
+```bash
+mise install
+```
 
-## Run
+[Only](https://github.com/KercyDing/only) is optional and provides shorter versions of the commands below.
 
-Run on the current machine:
+## Build
+
+Build both the API showcase and the shader example:
+
+```bash
+zig build
+# or:
+# only build
+```
+
+## Run Examples
+
+SDL3 is the default window backend:
 
 ```bash
 zig build run
+# or:
+# only run
 ```
 
-SDL3 is the default backend.
-
-Use GLFW instead:
+Run the API showcase with GLFW instead:
 
 ```bash
 zig build run -Dbackend=glfw
+# or:
+# only run glfw
 ```
 
+## Run Shader Example
+
+The shader example always uses SDL3, with Vulkan on Linux and Windows or Metal on macOS:
+
+```bash
+zig build run-shader
+# or:
+# only run-shader
+```
+
+## Linux
+
 The SDL3 Linux example forces the X11 video driver for now.
+
+## Cross-compilation
 
 Cross compile with Zig's standard target option. For example, Linux to Windows:
 
@@ -34,7 +62,7 @@ Cross compile with Zig's standard target option. For example, Linux to Windows:
 zig build -Dtarget=x86_64-windows-gnu
 ```
 
-Available Impeller SDK targets:
+Supported Impeller SDK targets:
 
 | Platform | `-Dtarget` |
 | --- | --- |
@@ -46,14 +74,3 @@ Available Impeller SDK targets:
 | Windows arm64 | `aarch64-windows-gnu` |
 
 These examples also build SDL3/GLFW and platform windowing code, so not every SDK target can be cross compiled from every host. macOS targets need Apple's SDK/frameworks, and Linux arm64 currently needs extra windowing cross-build support.
-
-## Resource ownership
-
-- Every Impeller handle returned by an `init` or `build` call is released exactly once with `deinit`.
-- Paints with filters or color sources use independent lexical scopes; handles are never overwritten while a deferred release is pending.
-- `Scene` retains the registered font bytes for its full lifetime because the current binding registers a borrowed mapping without exposing Impeller's release callback.
-- `Scene.deinit` releases the display list before its texture and retained font storage.
-
-## Known issue
-
-`zig build run` may print Vulkan swapchain validation errors. This comes from the current Impeller SDK, not these examples, and may be fixed by a future SDK update.
