@@ -100,6 +100,11 @@ pub fn build(b: *std.Build) void {
     exe.each_lib_rpath = false;
 
     impeller_pkg.linkRuntime(exe, impeller_dep);
+    const runtime_install = impeller_pkg.installRuntime(.{
+        .compile_step = exe,
+        .dependency = impeller_dep,
+    });
+    b.getInstallStep().dependOn(runtime_install);
 
     switch (os_tag) {
         .macos => {
@@ -117,11 +122,6 @@ pub fn build(b: *std.Build) void {
             exe.root_module.linkFramework("QuartzCore", .{});
 
             exe.root_module.addRPathSpecial("@executable_path");
-
-            b.getInstallStep().dependOn(impeller_pkg.installRuntime(.{
-                .compile_step = exe,
-                .dependency = impeller_dep,
-            }));
         },
         .linux => {
             exe.root_module.linkSystemLibrary("vulkan", .{});
@@ -130,18 +130,8 @@ pub fn build(b: *std.Build) void {
             exe.root_module.linkSystemLibrary("m", .{});
 
             exe.root_module.addRPathSpecial("$ORIGIN");
-
-            b.getInstallStep().dependOn(impeller_pkg.installRuntime(.{
-                .compile_step = exe,
-                .dependency = impeller_dep,
-            }));
         },
-        .windows => {
-            b.getInstallStep().dependOn(impeller_pkg.installRuntime(.{
-                .compile_step = exe,
-                .dependency = impeller_dep,
-            }));
-        },
+        .windows => {},
         else => {},
     }
 
@@ -155,4 +145,80 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "Run the selected example");
     run_step.dependOn(&run_cmd.step);
+
+    const shader_draw_mod = b.createModule(.{
+        .root_source_file = b.path("src/shaders/draw.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "impeller", .module = impeller_mod },
+            .{ .name = "font", .module = font_mod },
+        },
+    });
+
+    const shader_info: ExampleInfo = switch (os_tag) {
+        .linux => .{ .name = "linux-shader", .src = "src/linux/linux_shader.zig" },
+        .macos => .{ .name = "macos-shader", .src = "src/macos/macos_shader.zig" },
+        .windows => .{ .name = "windows-shader", .src = "src/windows/windows_shader.zig" },
+        else => @panic("Unsupported OS for shader example"),
+    };
+
+    const shader_mod = b.createModule(.{
+        .root_source_file = b.path(shader_info.src),
+        .target = target,
+        .optimize = optimize,
+    });
+    shader_mod.addImport("impeller", impeller_mod);
+    shader_mod.addImport("draw", shader_draw_mod);
+
+    const shader_sdl3_dep = b.lazyDependency("sdl3", .{
+        .target = target,
+        .optimize = optimize,
+    }) orelse return;
+    shader_mod.addImport("sdl3", shader_sdl3_dep.module("sdl3"));
+
+    const shader_exe = b.addExecutable(.{
+        .name = shader_info.name,
+        .root_module = shader_mod,
+        .use_llvm = if (os_tag == .macos) null else true,
+        .use_lld = if (os_tag == .macos) null else true,
+    });
+    shader_exe.each_lib_rpath = false;
+    impeller_pkg.linkRuntime(shader_exe, impeller_dep);
+
+    switch (os_tag) {
+        .macos => {
+            shader_exe.root_module.addCSourceFile(.{
+                .file = b.path("src/macos/macos_sdl3_metal.m"),
+                .flags = &.{ "-fobjc-arc", "-Wno-deprecated-declarations", "-Wno-unguarded-availability-new" },
+                .language = .objective_c,
+            });
+            shader_exe.root_module.linkFramework("AppKit", .{});
+            shader_exe.root_module.linkFramework("Metal", .{});
+            shader_exe.root_module.linkFramework("QuartzCore", .{});
+            shader_exe.root_module.addRPathSpecial("@executable_path");
+        },
+        .linux => {
+            shader_exe.root_module.linkSystemLibrary("vulkan", .{});
+            shader_exe.root_module.linkSystemLibrary("dl", .{});
+            shader_exe.root_module.linkSystemLibrary("pthread", .{});
+            shader_exe.root_module.linkSystemLibrary("m", .{});
+            shader_exe.root_module.addRPathSpecial("$ORIGIN");
+        },
+        .windows => {},
+        else => {},
+    }
+
+    const install_shader = b.addInstallArtifact(shader_exe, .{});
+    install_shader.step.dependOn(runtime_install);
+    b.getInstallStep().dependOn(&install_shader.step);
+
+    const run_shader_cmd = b.addRunArtifact(shader_exe);
+    run_shader_cmd.step.dependOn(&install_shader.step);
+    if (b.args) |args| {
+        run_shader_cmd.addArgs(args);
+    }
+
+    const run_shader_step = b.step("run-shader", "Run the SDL3 fragment shader example");
+    run_shader_step.dependOn(&run_shader_cmd.step);
 }
