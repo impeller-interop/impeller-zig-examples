@@ -8,7 +8,7 @@ Runnable SDL3 and GLFW examples for [`impeller-zig`](https://github.com/impeller
 </p>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/91145633-42b5-429e-9b43-99e7b27af426" width="700"/>
+  <img src="https://github.com/user-attachments/assets/883936cf-6c3b-40b6-a34a-0d6c7388b7cc" width="700"/>
 </p>
 
 ## Prerequisites
