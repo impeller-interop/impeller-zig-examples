@@ -101,7 +101,7 @@ const VulkanProcResolver = struct {
     fn resolve(instance: ?*anyopaque, proc_name: [*c]const u8, user_data: ?*anyopaque) callconv(.c) ?*anyopaque {
         _ = user_data;
         const GetProcAddr = *const fn (?*anyopaque, [*c]const u8) callconv(.c) ?*anyopaque;
-        const get_proc_addr: GetProcAddr = @ptrCast(sdl3.vulkan.getVkGetInstanceProcAddr() catch return null);
+        const get_proc_addr: GetProcAddr = @ptrCast(@alignCast(sdl3.vulkan.getVkGetInstanceProcAddr() catch return null));
         return get_proc_addr(instance, proc_name);
     }
 };
