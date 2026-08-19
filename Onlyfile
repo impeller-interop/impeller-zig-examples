@@ -1,33 +1,44 @@
-# Build Regular + Shader Examples
-build(backend="sdl3"):
-    zig build -Dbackend={{backend}}
-    echo 'Done.'
+!version 0.4
 
-# Run Regular Example
-run(backend="sdl3"):
+[help] Build Regular + Shader Examples
+[pass] Build succeeded.
+[fail] Build failed.
+build(backend = "sdl3"):
+    zig build -Dbackend={{backend}}
+
+[help] Run Regular Example
+[fail] Run failed.
+run(backend = "sdl3"):
     zig build run -Dbackend={{backend}}
 
-# Run Shader Example (SDL3)
+[help] Run Shader Example (SDL3)
+[fail] Run failed.
 run-shader():
     zig build run-shader
 
-# Build Metal+Vulkan Shader
-shader(name="planet"):
+[help] Build Metal+Vulkan Shader
+[desc] Compile a fragment shader for Metal and Vulkan.
+[desc] See: https://github.com/impeller-interop/impeller-sdk/releases/tag/impellerc
+[pass] Shader compiled.
+[fail] Shader compilation failed.
+shader(name = "planet"):
     mkdir -p .zig-cache/tmp
     impellerc --runtime-stage-metal --runtime-stage-vulkan --input=src/shaders/{{name}}.frag --input-type=frag --sl=src/shaders/{{name}}.iplr --spirv=.zig-cache/tmp/{{name}}.spv --iplr --verbose
-    echo 'Done.'
 
-# Format
+[help] Format
+[pass] Formatting complete.
+[fail] Formatting failed.
 fmt():
     zig fmt src build.zig build.zig.zon
-    echo 'Done.'
 
-# Clean Cache, Output
+[help] Clean Cache, Output
+[pass] Clean complete.
+[fail] Clean failed.
 clean():
     rm -rf .zig-cache zig-out
-    echo 'Done.'
 
-# Release Build
-release(backend="sdl3"):
+[help] Release Build
+[pass] Release build succeeded.
+[fail] Release build failed.
+release(backend = "sdl3"):
     zig build -Dbackend={{backend}} -Doptimize=ReleaseFast -Dstrip=true
-    echo 'Done.'
