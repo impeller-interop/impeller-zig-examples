@@ -64,6 +64,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path(example_info.src),
         .target = target,
         .optimize = optimize,
+        .strip = strip,
     });
 
     const shader_mod = b.createModule(.{
