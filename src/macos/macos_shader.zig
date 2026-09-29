@@ -1,36 +1,45 @@
+const std = @import("std");
 const impeller = @import("impeller");
 const draw = @import("draw");
-const sdl3 = @import("sdl3");
+const glfw = @import("glfw_c");
 
-extern fn macosSdl3ConfigureMetalLayer(layer: ?*anyopaque) ?*anyopaque;
-extern fn macosSdl3AcquireNextDrawable(layer: ?*anyopaque, width: f64, height: f64) ?*anyopaque;
-extern fn macosSdl3ReleaseDrawable(drawable: ?*anyopaque) void;
+extern fn macosGlfwAttachMetalLayer(nsview: ?*anyopaque) ?*anyopaque;
+extern fn macosGlfwAcquireNextDrawable(layer: ?*anyopaque, width: f64, height: f64) ?*anyopaque;
+extern fn macosGlfwReleaseDrawable(drawable: ?*anyopaque) void;
+
+/// Returns the underlying NSView for a GLFW window. Declared here because
+/// `glfw3native.h` pulls Carbon SDK headers that translate-c cannot parse.
+extern fn glfwGetCocoaView(window: ?*glfw.GLFWwindow) ?*anyopaque;
 
 const ExampleError = error{
-    MetalViewCreateFailed,
-    MetalLayerUnavailable,
+    GlfwInitFailed,
+    WindowCreateFailed,
+    MetalLayerAttachFailed,
 };
 
 pub fn main() !void {
-    defer sdl3.shutdown();
+    _ = glfw.glfwSetErrorCallback(glfwErrorCallback);
 
-    const init_flags = sdl3.InitFlags{ .video = true };
-    try sdl3.init(init_flags);
-    defer sdl3.quit(init_flags);
+    if (glfw.glfwInit() != glfw.GLFW_TRUE) {
+        return ExampleError.GlfwInitFailed;
+    }
+    defer glfw.glfwTerminate();
 
-    const window = try sdl3.video.Window.init("Impeller shader lab · Metal", draw.canvas_width, draw.canvas_height, .{
-        .metal = true,
-        .high_pixel_density = true,
-        .resizable = true,
-    });
-    defer window.deinit();
-
-    const metal_view = sdl3.c.SDL_Metal_CreateView(window.value) orelse return ExampleError.MetalViewCreateFailed;
-    defer sdl3.c.SDL_Metal_DestroyView(metal_view);
-
-    const metal_layer = macosSdl3ConfigureMetalLayer(sdl3.c.SDL_Metal_GetLayer(metal_view)) orelse {
-        return ExampleError.MetalLayerUnavailable;
+    glfw.glfwWindowHint(glfw.GLFW_CLIENT_API, glfw.GLFW_NO_API);
+    glfw.glfwWindowHint(glfw.GLFW_COCOA_RETINA_FRAMEBUFFER, glfw.GLFW_TRUE);
+    const window = glfw.glfwCreateWindow(
+        draw.canvas_width,
+        draw.canvas_height,
+        "Impeller shader lab · Metal",
+        null,
+        null,
+    ) orelse {
+        return ExampleError.WindowCreateFailed;
     };
+    defer glfw.glfwDestroyWindow(window);
+
+    const ns_view: ?*anyopaque = glfwGetCocoaView(window);
+    const metal_layer = macosGlfwAttachMetalLayer(ns_view) orelse return ExampleError.MetalLayerAttachFailed;
 
     var context = try impeller.Context.initMetal();
     defer context.deinit();
@@ -38,41 +47,42 @@ pub fn main() !void {
     var scene = try draw.createScene(context, "MACOS / METAL");
     defer scene.deinit();
 
-    var quit = false;
-    while (!quit) {
-        while (sdl3.events.poll()) |event| {
-            switch (event) {
-                .quit, .terminating => quit = true,
-                .key_down => |key| if (key.key == .escape) {
-                    quit = true;
-                },
-                else => {},
-            }
+    while (glfw.glfwWindowShouldClose(window) == glfw.GLFW_FALSE) {
+        glfw.glfwPollEvents();
+
+        if (glfw.glfwGetKey(window, glfw.GLFW_KEY_ESCAPE) == glfw.GLFW_PRESS) {
+            glfw.glfwSetWindowShouldClose(window, glfw.GLFW_TRUE);
         }
 
-        var width: c_int = 0;
-        var height: c_int = 0;
-        _ = sdl3.c.SDL_GetWindowSizeInPixels(window.value, &width, &height);
-        if (width <= 0 or height <= 0) continue;
+        var fb_width: c_int = 0;
+        var fb_height: c_int = 0;
+        glfw.glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        if (fb_width <= 0 or fb_height <= 0) {
+            continue;
+        }
 
-        const drawable = macosSdl3AcquireNextDrawable(
+        const drawable = macosGlfwAcquireNextDrawable(
             metal_layer,
-            @floatFromInt(width),
-            @floatFromInt(height),
+            @as(f64, @floatFromInt(fb_width)),
+            @as(f64, @floatFromInt(fb_height)),
         ) orelse continue;
-        defer macosSdl3ReleaseDrawable(drawable);
+        defer macosGlfwReleaseDrawable(drawable);
 
         var surface = try impeller.Surface.wrapMetalDrawable(context, drawable);
         defer surface.deinit();
 
         try draw.drawScene(surface, context, scene, .{
-            .width = @intCast(width),
-            .height = @intCast(height),
+            .width = @intCast(fb_width),
+            .height = @intCast(fb_height),
         }, elapsedSeconds());
         try surface.present();
     }
 }
 
 fn elapsedSeconds() f32 {
-    return @as(f32, @floatFromInt(sdl3.c.SDL_GetTicks())) / 1000.0;
+    return @floatCast(glfw.glfwGetTime());
+}
+
+fn glfwErrorCallback(code: c_int, description: [*c]const u8) callconv(.c) void {
+    std.debug.print("GLFW Error ({d}): {s}\n", .{ code, std.mem.span(description) });
 }

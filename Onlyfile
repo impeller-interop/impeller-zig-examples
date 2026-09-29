@@ -3,15 +3,15 @@
 [help] Build Regular + Shader Examples
 [pass] Build succeeded.
 [fail] Build failed.
-build(backend = "sdl3"):
-    zig build -Dbackend={{backend}}
+build():
+    zig build
 
 [help] Run Regular Example
 [fail] Run failed.
-run(backend = "sdl3"):
-    zig build run -Dbackend={{backend}}
+run():
+    zig build run
 
-[help] Run Shader Example (SDL3)
+[help] Run Shader Example
 [fail] Run failed.
 run-shader():
     zig build run-shader
@@ -40,5 +40,5 @@ clean():
 [help] Release Build
 [pass] Release build succeeded.
 [fail] Release build failed.
-release(backend = "sdl3"):
-    zig build -Dbackend={{backend}} -Doptimize=ReleaseFast -Dstrip=true
+release():
+    zig build -Doptimize=ReleaseFast -Dstrip=true

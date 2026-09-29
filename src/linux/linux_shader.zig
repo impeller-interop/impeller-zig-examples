@@ -1,27 +1,41 @@
+const std = @import("std");
 const impeller = @import("impeller");
 const draw = @import("draw");
-const sdl3 = @import("sdl3");
+const glfw = @import("glfw_c");
 
 const ExampleError = error{
+    GlfwInitFailed,
+    VulkanUnavailable,
+    WindowCreateFailed,
     VulkanInfoUnavailable,
     PresentationUnsupported,
+    SurfaceCreateFailed,
 };
 
 pub fn main() !void {
-    defer sdl3.shutdown();
+    _ = glfw.glfwSetErrorCallback(glfwErrorCallback);
+    glfw.glfwInitHint(glfw.GLFW_PLATFORM, glfw.GLFW_PLATFORM_X11);
 
-    try sdl3.hints.setWithPriority(.video_driver, "x11", .override);
+    if (glfw.glfwInit() != glfw.GLFW_TRUE) {
+        return ExampleError.GlfwInitFailed;
+    }
+    defer glfw.glfwTerminate();
 
-    const init_flags = sdl3.InitFlags{ .video = true };
-    try sdl3.init(init_flags);
-    defer sdl3.quit(init_flags);
+    if (glfw.glfwVulkanSupported() != glfw.GLFW_TRUE) {
+        return ExampleError.VulkanUnavailable;
+    }
 
-    const window = try sdl3.video.Window.init("Impeller shader lab · Vulkan", draw.canvas_width, draw.canvas_height, .{
-        .vulkan = true,
-        .resizable = true,
-        .high_pixel_density = true,
-    });
-    defer window.deinit();
+    glfw.glfwWindowHint(glfw.GLFW_CLIENT_API, glfw.GLFW_NO_API);
+    const window = glfw.glfwCreateWindow(
+        draw.canvas_width,
+        draw.canvas_height,
+        "Impeller shader lab · Vulkan",
+        null,
+        null,
+    ) orelse {
+        return ExampleError.WindowCreateFailed;
+    };
+    defer glfw.glfwDestroyWindow(window);
 
     var context = try impeller.Context.initVulkan(.{
         .user_data = null,
@@ -31,63 +45,65 @@ pub fn main() !void {
     defer context.deinit();
 
     const vulkan_info = context.vulkanInfo() orelse return ExampleError.VulkanInfoUnavailable;
-    if (!sdl3.vulkan.getPresentationSupport(
+
+    if (glfw.glfwGetPhysicalDevicePresentationSupport(
         @ptrCast(vulkan_info.vk_instance),
         @ptrCast(vulkan_info.vk_physical_device),
         vulkan_info.graphics_queue_family_index,
-    )) {
+    ) != glfw.GLFW_TRUE) {
         return ExampleError.PresentationUnsupported;
     }
 
-    const vulkan_surface = try sdl3.vulkan.Surface.init(
-        window,
-        @ptrCast(vulkan_info.vk_instance),
-        null,
-    );
+    var vulkan_surface: glfw.VkSurfaceKHR = null;
+    if (glfw.glfwCreateWindowSurface(@ptrCast(vulkan_info.vk_instance), window, null, &vulkan_surface) != 0) {
+        return ExampleError.SurfaceCreateFailed;
+    }
 
-    var swapchain = try impeller.VulkanSwapchain.init(context, @ptrCast(vulkan_surface.surface));
+    var swapchain = try impeller.VulkanSwapchain.init(context, @ptrCast(vulkan_surface));
     defer swapchain.deinit();
 
     var scene = try draw.createScene(context, "LINUX / VULKAN");
     defer scene.deinit();
 
-    var quit = false;
-    while (!quit) {
-        while (sdl3.events.poll()) |event| {
-            switch (event) {
-                .quit, .terminating => quit = true,
-                .key_down => |key| if (key.key == .escape) {
-                    quit = true;
-                },
-                else => {},
-            }
+    while (glfw.glfwWindowShouldClose(window) == glfw.GLFW_FALSE) {
+        glfw.glfwPollEvents();
+
+        if (glfw.glfwGetKey(window, glfw.GLFW_KEY_ESCAPE) == glfw.GLFW_PRESS) {
+            glfw.glfwSetWindowShouldClose(window, glfw.GLFW_TRUE);
         }
 
-        var width: c_int = 0;
-        var height: c_int = 0;
-        _ = sdl3.c.SDL_GetWindowSizeInPixels(window.value, &width, &height);
-        if (width <= 0 or height <= 0) continue;
+        var fb_width: c_int = 0;
+        var fb_height: c_int = 0;
+        glfw.glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        if (fb_width <= 0 or fb_height <= 0) {
+            continue;
+        }
 
         var surface = swapchain.acquireNextSurface() catch continue;
         defer surface.deinit();
 
         try draw.drawScene(surface, context, scene, .{
-            .width = @intCast(width),
-            .height = @intCast(height),
+            .width = @intCast(fb_width),
+            .height = @intCast(fb_height),
         }, elapsedSeconds());
         try surface.present();
     }
 }
 
 fn elapsedSeconds() f32 {
-    return @as(f32, @floatFromInt(sdl3.c.SDL_GetTicks())) / 1000.0;
+    return @floatCast(glfw.glfwGetTime());
 }
 
 const VulkanProcResolver = struct {
     fn resolve(instance: ?*anyopaque, proc_name: [*c]const u8, user_data: ?*anyopaque) callconv(.c) ?*anyopaque {
         _ = user_data;
-        const GetProcAddr = *const fn (?*anyopaque, [*c]const u8) callconv(.c) ?*anyopaque;
-        const get_proc_addr: GetProcAddr = @ptrCast(@alignCast(sdl3.vulkan.getVkGetInstanceProcAddr() catch return null));
-        return get_proc_addr(instance, proc_name);
+        return @ptrCast(@constCast(glfw.glfwGetInstanceProcAddress(
+            if (instance) |handle| @ptrCast(handle) else null,
+            proc_name,
+        )));
     }
 };
+
+fn glfwErrorCallback(code: c_int, description: [*c]const u8) callconv(.c) void {
+    std.debug.print("GLFW Error ({d}): {s}\n", .{ code, std.mem.span(description) });
+}
