@@ -35,7 +35,7 @@ fmt():
 [pass] Clean complete.
 [fail] Clean failed.
 clean():
-    rm -rf .zig-cache zig-out
+    rm -rf .zig-cache zig-out zig-pkg
 
 [help] Release Build
 [pass] Release build succeeded.
