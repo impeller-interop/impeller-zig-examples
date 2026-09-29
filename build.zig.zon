@@ -5,13 +5,13 @@
     .minimum_zig_version = "0.17.0-dev",
     .dependencies = .{
         .glfw_zig = .{
-            .url = "git+https://github.com/tiawl/glfw.zig?ref=stable#3f66f949765e342696375cd83cbdd14bbb45aa58",
-            .hash = "glfw_zig-1.0.0-NrvYowQnGgCvgZVpmWhFTJwN56pw6cgTdi6fQ3yufsbt",
+            .url = "git+https://github.com/tiawl/glfw.zig#6330b9fff9137d5478415452113cff5c7584150c",
+            .hash = "glfw_zig-1.0.0-NrvYoxInGgASaYSHqRhKAPPA9U7hMOqT3jWtrf_HxsbK",
             .lazy = true,
         },
         .impeller_zig = .{
-            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.2.0#a33a50a7a8279b2e37f684f0cabb6c45f5fa5daf",
-            .hash = "impeller_zig-0.2.0-GYR4WtEtAgDlxlpGA7Omu5c8-oCkRzbMuIgR98dZIYLo",
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.2.0#27a4b3eb3e4a1e37afbadcbcc138ee6955bb3ba3",
+            .hash = "impeller_zig-0.2.0-GYR4WoIuAgCqKsE0h-Q6bnxwIfurBWlkNWUdHgwIn9_y",
         },
     },
     .paths = .{
