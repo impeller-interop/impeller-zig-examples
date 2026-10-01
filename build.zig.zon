@@ -10,8 +10,8 @@
             .lazy = true,
         },
         .impeller_zig = .{
-            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.2.0#27a4b3eb3e4a1e37afbadcbcc138ee6955bb3ba3",
-            .hash = "impeller_zig-0.2.0-GYR4WoIuAgCqKsE0h-Q6bnxwIfurBWlkNWUdHgwIn9_y",
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.2.1#64a75884faadbe78fa919e0488337797acbcdedf",
+            .hash = "impeller_zig-0.2.1-GYR4WgwtAgD7pLYEeT5-A8aIzUPSda0b4WSZ8HDc37lR",
         },
     },
     .paths = .{
