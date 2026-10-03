@@ -16,7 +16,7 @@ Runnable GLFW examples for [`impeller-zig`](https://github.com/impeller-interop/
 
 ## Prerequisites
 
-Install Zig master (`0.17.0-dev`) directly, or use [mise](https://github.com/jdx/mise) to install the toolchain pinned by this repository:
+Install Zig `0.17.0` directly, or use [mise](https://github.com/jdx/mise) to install the toolchain pinned by this repository:
 
 ```bash
 mise install
