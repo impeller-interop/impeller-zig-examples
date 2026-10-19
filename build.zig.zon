@@ -4,14 +4,14 @@
     .fingerprint = 0xc9e9c5565c6334f1,
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
+        .impeller_zig = .{
+            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=main#59380ad54ebd51532854a78756f787bdf162fb00",
+            .hash = "impeller_zig-0.2.2-GYR4WgEtAgD5-wOdEwh5s-vyOyFbQA7kOZFlzVsv90kd",
+        },
         .glfw_zig = .{
             .url = "git+https://github.com/tiawl/glfw.zig#6330b9fff9137d5478415452113cff5c7584150c",
             .hash = "glfw_zig-1.0.0-NrvYoxInGgASaYSHqRhKAPPA9U7hMOqT3jWtrf_HxsbK",
             .lazy = true,
-        },
-        .impeller_zig = .{
-            .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.2.2#50fcd480a68fed55626d6474217770d559aa0a7b",
-            .hash = "impeller_zig-0.2.2-GYR4WgEtAgCYNl6dEgkpBofkvoJWsl3t6794Ta_3E0_4",
         },
         .sdl3 = .{
             .url = "git+https://codeberg.org/7Games/zig-sdl3?ref=v0.2.3#666331118c8f7d8a03ea633d79a343c34dc32b84",
