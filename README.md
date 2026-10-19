@@ -1,6 +1,6 @@
 # impeller-zig-examples
 
-Runnable GLFW examples for [`impeller-zig`](https://github.com/impeller-interop/impeller-zig).
+Runnable SDL3 and GLFW examples for [`impeller-zig`](https://github.com/impeller-interop/impeller-zig).
 
 <p align="center">
   <img width=30%" alt="macos" src="https://github.com/user-attachments/assets/02905434-18fe-4ce8-a45f-ad320b8e3916" />
@@ -26,7 +26,7 @@ mise install
 
 ## Build
 
-Build both the API showcase and the shader example:
+Build both the API showcase and the shader example. SDL3 is the default window backend:
 
 ```bash
 zig build
@@ -36,15 +36,25 @@ zig build
 
 ## Run Examples
 
+Run the API showcase with SDL3:
+
 ```bash
 zig build run
 # or:
 # only run
 ```
 
+Run the API showcase with GLFW instead:
+
+```bash
+zig build run -Dbackend=glfw
+# or:
+# only run glfw
+```
+
 ## Run Shader Example
 
-The shader example uses Vulkan on Linux and Windows, or Metal on macOS:
+The shader example always uses SDL3, with Vulkan on Linux and Windows or Metal on macOS:
 
 ```bash
 zig build run-shader
@@ -54,11 +64,11 @@ zig build run-shader
 
 ## Linux
 
-The Linux example forces the X11 video driver for now.
+The Linux SDL3 examples force the X11 video driver for now.
 
 ## Cross-compilation
 
-Cross compile with Zig's standard target option. For example, macOS to Windows:
+Cross compile with Zig's standard target option. For example, Linux to Windows:
 
 ```bash
 zig build -Dtarget=x86_64-windows-gnu
@@ -75,6 +85,6 @@ Supported Impeller SDK targets:
 | Windows x64 | `x86_64-windows-gnu` |
 | Windows arm64 | `aarch64-windows-gnu` |
 
-macOS targets require Apple's SDK/frameworks. Linux targets currently need to be
-built on a Linux host, because the X11 package builds `makekeys` for the target
-and runs it during the build.
+macOS targets require Apple's SDK/frameworks. With `-Dbackend=glfw`, Linux targets
+currently need to be built on a Linux host, because the X11 package builds
+`makekeys` for the target and runs it during the build.

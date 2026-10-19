@@ -13,6 +13,11 @@
             .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.2.2#50fcd480a68fed55626d6474217770d559aa0a7b",
             .hash = "impeller_zig-0.2.2-GYR4WgEtAgCYNl6dEgkpBofkvoJWsl3t6794Ta_3E0_4",
         },
+        .sdl3 = .{
+            .url = "git+https://codeberg.org/7Games/zig-sdl3?ref=v0.2.3#666331118c8f7d8a03ea633d79a343c34dc32b84",
+            .hash = "sdl3-0.2.3-NmT1Q1QDKgACd5t_PNSG08lcOCX25qaRYZjUmXPTVBY_",
+            .lazy = true,
+        },
     },
     .paths = .{
         "build.zig",

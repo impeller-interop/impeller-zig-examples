@@ -1,6 +1,8 @@
 const std = @import("std");
 const impeller_pkg = @import("impeller_zig");
 
+const Backend = enum { glfw, sdl3 };
+
 const ExampleInfo = struct {
     name: []const u8,
     src: []const u8,
@@ -12,12 +14,21 @@ pub fn build(b: *std.Build) void {
     const strip = b.option(bool, "strip", "Strip debug symbols") orelse false;
 
     const os_tag = target.result.os.tag;
+    const backend = b.option(Backend, "backend", "Window backend (sdl3, glfw)") orelse .sdl3;
 
-    const example_info: ExampleInfo = switch (os_tag) {
-        .linux => .{ .name = "linux-glfw", .src = "src/linux/linux_glfw.zig" },
-        .macos => .{ .name = "macos-glfw", .src = "src/macos/macos_glfw.zig" },
-        .windows => .{ .name = "windows-glfw", .src = "src/windows/windows_glfw.zig" },
-        else => @panic("Unsupported OS for the GLFW examples"),
+    const example_info: ExampleInfo = switch (backend) {
+        .glfw => switch (os_tag) {
+            .linux => .{ .name = "linux-glfw", .src = "src/linux/linux_glfw.zig" },
+            .macos => .{ .name = "macos-glfw", .src = "src/macos/macos_glfw.zig" },
+            .windows => .{ .name = "windows-glfw", .src = "src/windows/windows_glfw.zig" },
+            else => @panic("Unsupported OS for the GLFW examples"),
+        },
+        .sdl3 => switch (os_tag) {
+            .linux => .{ .name = "linux-sdl3", .src = "src/linux/linux_sdl3.zig" },
+            .macos => .{ .name = "macos-sdl3", .src = "src/macos/macos_sdl3.zig" },
+            .windows => .{ .name = "windows-sdl3", .src = "src/windows/windows_sdl3.zig" },
+            else => @panic("Unsupported OS for the SDL3 examples"),
+        },
     };
 
     const shader_info: ExampleInfo = switch (os_tag) {
@@ -33,23 +44,11 @@ pub fn build(b: *std.Build) void {
     });
     const impeller_mod = impeller_dep.module("impeller");
 
-    const glfw_dep = b.lazyDependency("glfw_zig", .{
+    const sdl3_dep = b.lazyDependency("sdl3", .{
         .target = target,
         .optimize = optimize,
     }) orelse return;
-    const glfw_lib = glfw_dep.artifact("glfw");
-
-    const glfw_translate = b.addTranslateC(.{
-        .root_source_file = glfw_dep.path("glfw/include/GLFW/glfw3.h"),
-        .target = target,
-        .optimize = optimize,
-    });
-    if (os_tag == .linux or os_tag == .windows) {
-        glfw_translate.defineCMacro("GLFW_INCLUDE_VULKAN", null);
-        glfw_translate.defineCMacro("GLFW_INCLUDE_NONE", null);
-        glfw_translate.addIncludePath(glfw_lib.getEmittedIncludeTree());
-    }
-    const glfw_mod = glfw_translate.createModule();
+    const sdl3_mod = sdl3_dep.module("sdl3");
 
     const font_mod = b.createModule(.{
         .root_source_file = b.path("src/font.zig"),
@@ -83,12 +82,32 @@ pub fn build(b: *std.Build) void {
 
     exe_mod.addImport("impeller", impeller_mod);
     exe_mod.addImport("draw", draw_mod);
-    exe_mod.addImport("glfw_c", glfw_mod);
-    exe_mod.linkLibrary(glfw_lib);
+    switch (backend) {
+        .glfw => {
+            const glfw_dep = b.lazyDependency("glfw_zig", .{
+                .target = target,
+                .optimize = optimize,
+            }) orelse return;
+            const glfw_lib = glfw_dep.artifact("glfw");
+
+            const glfw_translate = b.addTranslateC(.{
+                .root_source_file = glfw_dep.path("glfw/include/GLFW/glfw3.h"),
+                .target = target,
+                .optimize = optimize,
+            });
+            if (os_tag == .linux or os_tag == .windows) {
+                glfw_translate.defineCMacro("GLFW_INCLUDE_VULKAN", null);
+                glfw_translate.defineCMacro("GLFW_INCLUDE_NONE", null);
+                glfw_translate.addIncludePath(glfw_lib.getEmittedIncludeTree());
+            }
+            exe_mod.addImport("glfw_c", glfw_translate.createModule());
+            exe_mod.linkLibrary(glfw_lib);
+        },
+        .sdl3 => exe_mod.addImport("sdl3", sdl3_mod),
+    }
 
     shader_mod.addImport("impeller", impeller_mod);
-    shader_mod.addImport("glfw_c", glfw_mod);
-    shader_mod.linkLibrary(glfw_lib);
+    shader_mod.addImport("sdl3", sdl3_mod);
     shader_mod.addAnonymousImport("draw", .{
         .root_source_file = b.path("src/shaders/draw.zig"),
         .imports = &.{
@@ -122,8 +141,12 @@ pub fn build(b: *std.Build) void {
 
     switch (os_tag) {
         .macos => {
+            const metal_file = switch (backend) {
+                .glfw => "src/macos/macos_glfw_metal.m",
+                .sdl3 => "src/macos/macos_sdl3_metal.m",
+            };
             exe.root_module.addCSourceFile(.{
-                .file = b.path("src/macos/macos_glfw_metal.m"),
+                .file = b.path(metal_file),
                 .flags = &.{ "-fobjc-arc", "-Wno-deprecated-declarations", "-Wno-unguarded-availability-new" },
                 .language = .objective_c,
             });
@@ -151,7 +174,7 @@ pub fn build(b: *std.Build) void {
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(&install_exe.step);
 
-    const run_step = b.step("run", "Run the GLFW example");
+    const run_step = b.step("run", "Run the selected window backend example");
     run_step.dependOn(&run_cmd.step);
 
     impeller_pkg.linkRuntime(shader_exe, impeller_dep);
@@ -159,7 +182,7 @@ pub fn build(b: *std.Build) void {
     switch (os_tag) {
         .macos => {
             shader_exe.root_module.addCSourceFile(.{
-                .file = b.path("src/macos/macos_glfw_metal.m"),
+                .file = b.path("src/macos/macos_sdl3_metal.m"),
                 .flags = &.{ "-fobjc-arc", "-Wno-deprecated-declarations", "-Wno-unguarded-availability-new" },
                 .language = .objective_c,
             });
@@ -185,6 +208,6 @@ pub fn build(b: *std.Build) void {
     const run_shader_cmd = b.addRunArtifact(shader_exe);
     run_shader_cmd.step.dependOn(&install_shader.step);
 
-    const run_shader_step = b.step("run-shader", "Run the fragment shader example");
+    const run_shader_step = b.step("run-shader", "Run the SDL3 fragment shader example");
     run_shader_step.dependOn(&run_shader_cmd.step);
 }
