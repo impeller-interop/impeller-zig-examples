@@ -8,7 +8,7 @@ const ExampleInfo = struct {
     src: []const u8,
 };
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const strip = b.option(bool, "strip", "Strip debug symbols") orelse false;
@@ -44,10 +44,10 @@ pub fn build(b: *std.Build) void {
     });
     const impeller_mod = impeller_dep.module("impeller");
 
-    const sdl3_dep = b.lazyDependency("sdl3", .{
+    const sdl3_dep = try b.dependencyLazy("sdl3", .{
         .target = target,
         .optimize = optimize,
-    }) orelse return;
+    });
     const sdl3_mod = sdl3_dep.module("sdl3");
 
     const font_mod = b.createModule(.{
@@ -84,10 +84,10 @@ pub fn build(b: *std.Build) void {
     exe_mod.addImport("draw", draw_mod);
     switch (backend) {
         .glfw => {
-            const glfw_dep = b.lazyDependency("glfw_zig", .{
+            const glfw_dep = try b.dependencyLazy("glfw_zig", .{
                 .target = target,
                 .optimize = optimize,
-            }) orelse return;
+            });
             const glfw_lib = glfw_dep.artifact("glfw");
 
             const glfw_translate = b.addTranslateC(.{
