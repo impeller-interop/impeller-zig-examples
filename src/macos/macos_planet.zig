@@ -1,5 +1,5 @@
 const impeller = @import("impeller");
-const draw = @import("draw");
+const planet = @import("planet");
 const sdl3 = @import("sdl3");
 
 extern fn macosSdl3ConfigureMetalLayer(layer: ?*anyopaque) ?*anyopaque;
@@ -18,7 +18,7 @@ pub fn main() !void {
     try sdl3.init(init_flags);
     defer sdl3.quit(init_flags);
 
-    const window = try sdl3.video.Window.init("Impeller shader lab · Metal", draw.canvas_width, draw.canvas_height, .{
+    const window = try sdl3.video.Window.init("Impeller planet · Metal", planet.canvas_width, planet.canvas_height, .{
         .metal = true,
         .high_pixel_density = true,
         .resizable = true,
@@ -35,7 +35,7 @@ pub fn main() !void {
     var context = try impeller.Context.initMetal();
     defer context.deinit();
 
-    var scene = try draw.createScene(context, "MACOS / METAL");
+    var scene = try planet.createScene(context, "MACOS / METAL");
     defer scene.deinit();
 
     var quit = false;
@@ -65,7 +65,7 @@ pub fn main() !void {
         var surface = try impeller.Surface.wrapMetalDrawable(context, drawable);
         defer surface.deinit();
 
-        try draw.drawScene(surface, context, scene, .{
+        try planet.drawScene(surface, context, scene, .{
             .width = @intCast(width),
             .height = @intCast(height),
         }, elapsedSeconds());

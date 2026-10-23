@@ -31,11 +31,11 @@ pub fn build(b: *std.Build) !void {
         },
     };
 
-    const shader_info: ExampleInfo = switch (os_tag) {
-        .linux => .{ .name = "linux-shader", .src = "src/linux/linux_shader.zig" },
-        .macos => .{ .name = "macos-shader", .src = "src/macos/macos_shader.zig" },
-        .windows => .{ .name = "windows-shader", .src = "src/windows/windows_shader.zig" },
-        else => @panic("Unsupported OS for the shader example"),
+    const planet_info: ExampleInfo = switch (os_tag) {
+        .linux => .{ .name = "linux-planet", .src = "src/linux/linux_planet.zig" },
+        .macos => .{ .name = "macos-planet", .src = "src/macos/macos_planet.zig" },
+        .windows => .{ .name = "windows-planet", .src = "src/windows/windows_planet.zig" },
+        else => @panic("Unsupported OS for the planet example"),
     };
 
     const liquid_glass_info: ExampleInfo = switch (os_tag) {
@@ -80,8 +80,8 @@ pub fn build(b: *std.Build) !void {
         .strip = strip,
     });
 
-    const shader_mod = b.createModule(.{
-        .root_source_file = b.path(shader_info.src),
+    const planet_mod = b.createModule(.{
+        .root_source_file = b.path(planet_info.src),
         .target = target,
         .optimize = optimize,
         .strip = strip,
@@ -120,10 +120,10 @@ pub fn build(b: *std.Build) !void {
         .sdl3 => exe_mod.addImport("sdl3", sdl3_mod),
     }
 
-    shader_mod.addImport("impeller", impeller_mod);
-    shader_mod.addImport("sdl3", sdl3_mod);
-    shader_mod.addAnonymousImport("draw", .{
-        .root_source_file = b.path("src/shaders/draw.zig"),
+    planet_mod.addImport("impeller", impeller_mod);
+    planet_mod.addImport("sdl3", sdl3_mod);
+    planet_mod.addAnonymousImport("planet", .{
+        .root_source_file = b.path("src/shaders/planet_draw.zig"),
         .imports = &.{
             .{ .name = "impeller", .module = impeller_mod },
         },
@@ -145,9 +145,9 @@ pub fn build(b: *std.Build) !void {
         .use_lld = if (os_tag == .macos) null else true,
     });
 
-    const shader_exe = b.addExecutable(.{
-        .name = shader_info.name,
-        .root_module = shader_mod,
+    const planet_exe = b.addExecutable(.{
+        .name = planet_info.name,
+        .root_module = planet_mod,
         .use_llvm = if (os_tag == .macos) null else true,
         .use_lld = if (os_tag == .macos) null else true,
     });
@@ -160,7 +160,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     exe.each_lib_rpath = false;
-    shader_exe.each_lib_rpath = false;
+    planet_exe.each_lib_rpath = false;
     liquid_glass_exe.each_lib_rpath = false;
 
     impeller_pkg.linkRuntime(exe, impeller_dep);
@@ -208,39 +208,39 @@ pub fn build(b: *std.Build) !void {
     const run_step = b.step("run", "Run the selected window backend example");
     run_step.dependOn(&run_cmd.step);
 
-    impeller_pkg.linkRuntime(shader_exe, impeller_dep);
+    impeller_pkg.linkRuntime(planet_exe, impeller_dep);
 
     switch (os_tag) {
         .macos => {
-            shader_exe.root_module.addCSourceFile(.{
+            planet_exe.root_module.addCSourceFile(.{
                 .file = b.path("src/macos/macos_sdl3_metal.m"),
                 .flags = &.{ "-fobjc-arc", "-Wno-deprecated-declarations", "-Wno-unguarded-availability-new" },
                 .language = .objective_c,
             });
-            shader_exe.root_module.linkFramework("AppKit", .{});
-            shader_exe.root_module.linkFramework("Metal", .{});
-            shader_exe.root_module.linkFramework("QuartzCore", .{});
-            shader_exe.root_module.addRPathSpecial("@executable_path");
+            planet_exe.root_module.linkFramework("AppKit", .{});
+            planet_exe.root_module.linkFramework("Metal", .{});
+            planet_exe.root_module.linkFramework("QuartzCore", .{});
+            planet_exe.root_module.addRPathSpecial("@executable_path");
         },
         .linux => {
-            shader_exe.root_module.linkSystemLibrary("dl", .{});
-            shader_exe.root_module.linkSystemLibrary("pthread", .{});
-            shader_exe.root_module.linkSystemLibrary("m", .{});
-            shader_exe.root_module.addRPathSpecial("$ORIGIN");
+            planet_exe.root_module.linkSystemLibrary("dl", .{});
+            planet_exe.root_module.linkSystemLibrary("pthread", .{});
+            planet_exe.root_module.linkSystemLibrary("m", .{});
+            planet_exe.root_module.addRPathSpecial("$ORIGIN");
         },
         .windows => {},
         else => {},
     }
 
-    const install_shader = b.addInstallArtifact(shader_exe, .{});
-    install_shader.step.dependOn(runtime_install);
-    b.getInstallStep().dependOn(&install_shader.step);
+    const install_planet = b.addInstallArtifact(planet_exe, .{});
+    install_planet.step.dependOn(runtime_install);
+    b.getInstallStep().dependOn(&install_planet.step);
 
-    const run_shader_cmd = b.addRunArtifact(shader_exe);
-    run_shader_cmd.step.dependOn(&install_shader.step);
+    const run_planet_cmd = b.addRunArtifact(planet_exe);
+    run_planet_cmd.step.dependOn(&install_planet.step);
 
-    const run_shader_step = b.step("run-shader", "Run the SDL3 fragment shader example");
-    run_shader_step.dependOn(&run_shader_cmd.step);
+    const run_planet_step = b.step("run-planet", "Run the SDL3 planet shader example");
+    run_planet_step.dependOn(&run_planet_cmd.step);
 
     impeller_pkg.linkRuntime(liquid_glass_exe, impeller_dep);
 

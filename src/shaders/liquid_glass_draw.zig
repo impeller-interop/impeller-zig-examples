@@ -1,7 +1,7 @@
 const std = @import("std");
 const impeller = @import("impeller");
 
-const shader_bytes = @embedFile("liquid_glass.iplr");
+const shader_bytes = @embedFile("shader/liquid_glass.iplr");
 
 pub const canvas_width = 960;
 pub const canvas_height = 640;

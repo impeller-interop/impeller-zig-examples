@@ -1,7 +1,7 @@
 const std = @import("std");
 const impeller = @import("impeller");
 
-const shader_bytes = @embedFile("planet.iplr");
+const shader_bytes = @embedFile("shader/planet.iplr");
 
 pub const canvas_width = 960;
 pub const canvas_height = 640;

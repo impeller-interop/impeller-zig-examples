@@ -26,7 +26,7 @@ mise install
 
 ## Build
 
-Build both the API showcase and the shader example. SDL3 is the default window backend:
+Build the API showcase, the planet example and the liquid glass example. SDL3 is the default window backend:
 
 ```bash
 zig build
@@ -52,14 +52,14 @@ zig build run -Dbackend=glfw
 # only run glfw
 ```
 
-## Run Shader Example
+## Run Planet Example
 
-The shader example always uses SDL3, with Vulkan on Linux and Windows or Metal on macOS:
+The planet example always uses SDL3, with Vulkan on Linux and Windows or Metal on macOS:
 
 ```bash
-zig build run-shader
+zig build run-planet
 # or:
-# only run-shader
+# only run-planet
 ```
 
 ## Run Liquid Glass Example
@@ -73,8 +73,8 @@ zig build run-liquid-glass
 # only run-liquid-glass
 ```
 
-`src/shaders/liquid_glass.iplr` is checked in; rebuild it with `impellerc` after
-editing the shader.
+`src/shaders/shader/liquid_glass.iplr` is checked in; rebuild it with
+`impellerc` after editing the shader.
 
 ## Linux
 

@@ -1,5 +1,5 @@
 const impeller = @import("impeller");
-const draw = @import("draw");
+const planet = @import("planet");
 const sdl3 = @import("sdl3");
 
 const ExampleError = error{
@@ -14,7 +14,7 @@ pub fn main() !void {
     try sdl3.init(init_flags);
     defer sdl3.quit(init_flags);
 
-    const window = try sdl3.video.Window.init("Impeller shader lab · Vulkan", draw.canvas_width, draw.canvas_height, .{
+    const window = try sdl3.video.Window.init("Impeller planet · Vulkan", planet.canvas_width, planet.canvas_height, .{
         .vulkan = true,
         .resizable = true,
         .high_pixel_density = true,
@@ -47,7 +47,7 @@ pub fn main() !void {
     var swapchain = try impeller.VulkanSwapchain.init(context, @ptrCast(vulkan_surface.surface));
     defer swapchain.deinit();
 
-    var scene = try draw.createScene(context, "WINDOWS / VULKAN");
+    var scene = try planet.createScene(context, "WINDOWS / VULKAN");
     defer scene.deinit();
 
     var quit = false;
@@ -70,7 +70,7 @@ pub fn main() !void {
         var surface = swapchain.acquireNextSurface() catch continue;
         defer surface.deinit();
 
-        try draw.drawScene(surface, context, scene, .{
+        try planet.drawScene(surface, context, scene, .{
             .width = @intCast(width),
             .height = @intCast(height),
         }, elapsedSeconds());
