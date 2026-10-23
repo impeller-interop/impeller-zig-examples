@@ -62,6 +62,20 @@ zig build run-shader
 # only run-shader
 ```
 
+## Run Liquid Glass Example
+
+A single SDL3 fragment shader draws the animated mesh-gradient wallpaper and an
+iOS-style glass pill over it. Vulkan on Linux and Windows, Metal on macOS:
+
+```bash
+zig build run-liquid-glass
+# or:
+# only run-liquid-glass
+```
+
+`src/shaders/liquid_glass.iplr` is checked in; rebuild it with `impellerc` after
+editing the shader.
+
 ## Linux
 
 The Linux SDL3 examples force the X11 video driver for now.

@@ -38,6 +38,13 @@ pub fn build(b: *std.Build) !void {
         else => @panic("Unsupported OS for the shader example"),
     };
 
+    const liquid_glass_info: ExampleInfo = switch (os_tag) {
+        .linux => .{ .name = "linux-liquid-glass", .src = "src/linux/linux_liquid_glass.zig" },
+        .macos => .{ .name = "macos-liquid-glass", .src = "src/macos/macos_liquid_glass.zig" },
+        .windows => .{ .name = "windows-liquid-glass", .src = "src/windows/windows_liquid_glass.zig" },
+        else => @panic("Unsupported OS for the liquid glass example"),
+    };
+
     const impeller_dep = b.dependency("impeller_zig", .{
         .target = target,
         .optimize = optimize,
@@ -80,6 +87,13 @@ pub fn build(b: *std.Build) !void {
         .strip = strip,
     });
 
+    const liquid_glass_mod = b.createModule(.{
+        .root_source_file = b.path(liquid_glass_info.src),
+        .target = target,
+        .optimize = optimize,
+        .strip = strip,
+    });
+
     exe_mod.addImport("impeller", impeller_mod);
     exe_mod.addImport("draw", draw_mod);
     switch (backend) {
@@ -115,6 +129,15 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
+    liquid_glass_mod.addImport("impeller", impeller_mod);
+    liquid_glass_mod.addImport("sdl3", sdl3_mod);
+    liquid_glass_mod.addAnonymousImport("liquid_glass", .{
+        .root_source_file = b.path("src/shaders/liquid_glass_draw.zig"),
+        .imports = &.{
+            .{ .name = "impeller", .module = impeller_mod },
+        },
+    });
+
     const exe = b.addExecutable(.{
         .name = example_info.name,
         .root_module = exe_mod,
@@ -129,8 +152,16 @@ pub fn build(b: *std.Build) !void {
         .use_lld = if (os_tag == .macos) null else true,
     });
 
+    const liquid_glass_exe = b.addExecutable(.{
+        .name = liquid_glass_info.name,
+        .root_module = liquid_glass_mod,
+        .use_llvm = if (os_tag == .macos) null else true,
+        .use_lld = if (os_tag == .macos) null else true,
+    });
+
     exe.each_lib_rpath = false;
     shader_exe.each_lib_rpath = false;
+    liquid_glass_exe.each_lib_rpath = false;
 
     impeller_pkg.linkRuntime(exe, impeller_dep);
     const runtime_install = impeller_pkg.installRuntime(.{
@@ -210,4 +241,38 @@ pub fn build(b: *std.Build) !void {
 
     const run_shader_step = b.step("run-shader", "Run the SDL3 fragment shader example");
     run_shader_step.dependOn(&run_shader_cmd.step);
+
+    impeller_pkg.linkRuntime(liquid_glass_exe, impeller_dep);
+
+    switch (os_tag) {
+        .macos => {
+            liquid_glass_exe.root_module.addCSourceFile(.{
+                .file = b.path("src/macos/macos_sdl3_metal.m"),
+                .flags = &.{ "-fobjc-arc", "-Wno-deprecated-declarations", "-Wno-unguarded-availability-new" },
+                .language = .objective_c,
+            });
+            liquid_glass_exe.root_module.linkFramework("AppKit", .{});
+            liquid_glass_exe.root_module.linkFramework("Metal", .{});
+            liquid_glass_exe.root_module.linkFramework("QuartzCore", .{});
+            liquid_glass_exe.root_module.addRPathSpecial("@executable_path");
+        },
+        .linux => {
+            liquid_glass_exe.root_module.linkSystemLibrary("dl", .{});
+            liquid_glass_exe.root_module.linkSystemLibrary("pthread", .{});
+            liquid_glass_exe.root_module.linkSystemLibrary("m", .{});
+            liquid_glass_exe.root_module.addRPathSpecial("$ORIGIN");
+        },
+        .windows => {},
+        else => {},
+    }
+
+    const install_liquid_glass = b.addInstallArtifact(liquid_glass_exe, .{});
+    install_liquid_glass.step.dependOn(runtime_install);
+    b.getInstallStep().dependOn(&install_liquid_glass.step);
+
+    const run_liquid_glass_cmd = b.addRunArtifact(liquid_glass_exe);
+    run_liquid_glass_cmd.step.dependOn(&install_liquid_glass.step);
+
+    const run_liquid_glass_step = b.step("run-liquid-glass", "Run the SDL3 liquid glass example");
+    run_liquid_glass_step.dependOn(&run_liquid_glass_cmd.step);
 }

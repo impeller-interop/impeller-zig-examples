@@ -16,6 +16,11 @@ run(backend = "sdl3"):
 run-shader():
     zig build run-shader
 
+[help] Run Liquid Glass Example (SDL3)
+[fail] Run failed.
+run-liquid-glass():
+    zig build run-liquid-glass
+
 [help] Build Metal+Vulkan Shader
 [desc] Compile a fragment shader for Metal and Vulkan.
 [desc] See: https://github.com/impeller-interop/impeller-sdk/releases/tag/impellerc
@@ -24,6 +29,14 @@ run-shader():
 shader(name = "planet"):
     mkdir -p .zig-cache/tmp
     impellerc --runtime-stage-metal --runtime-stage-vulkan --input=src/shaders/{{name}}.frag --input-type=frag --sl=src/shaders/{{name}}.iplr --spirv=.zig-cache/tmp/{{name}}.spv --iplr --verbose
+
+[help] Build Liquid Glass Shader
+[desc] Compile the procedural liquid glass shader for Metal and Vulkan.
+[pass] Shader compiled.
+[fail] Shader compilation failed.
+shader-liquid-glass():
+    mkdir -p .zig-cache/tmp
+    impellerc --runtime-stage-metal --runtime-stage-vulkan --input=src/shaders/liquid_glass.frag --input-type=frag --sl=src/shaders/liquid_glass.iplr --spirv=.zig-cache/tmp/liquid_glass.spv --iplr --verbose
 
 [help] Format
 [pass] Formatting complete.
