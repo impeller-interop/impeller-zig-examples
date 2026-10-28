@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) !void {
 
     const os_tag = target.result.os.tag;
     const backend = b.option(Backend, "backend", "Window backend (sdl3, glfw)") orelse .sdl3;
+    const exe_suffix = if (os_tag == .windows) ".exe" else "";
 
     const example_info: ExampleInfo = switch (backend) {
         .glfw => switch (os_tag) {
@@ -163,7 +164,6 @@ pub fn build(b: *std.Build) !void {
     planet_exe.each_lib_rpath = false;
     liquid_glass_exe.each_lib_rpath = false;
 
-    impeller_pkg.linkRuntime(exe, impeller_dep);
     const runtime_install = impeller_pkg.installRuntime(.{
         .compile_step = exe,
         .dependency = impeller_dep,
@@ -202,13 +202,11 @@ pub fn build(b: *std.Build) !void {
     install_exe.step.dependOn(runtime_install);
     b.getInstallStep().dependOn(&install_exe.step);
 
-    const run_cmd = b.addRunArtifact(exe);
+    const run_cmd = b.addRunFile(b.path(b.fmt("zig-out/bin/{s}{s}", .{ example_info.name, exe_suffix })));
     run_cmd.step.dependOn(&install_exe.step);
 
     const run_step = b.step("run", "Run the selected window backend example");
     run_step.dependOn(&run_cmd.step);
-
-    impeller_pkg.linkRuntime(planet_exe, impeller_dep);
 
     switch (os_tag) {
         .macos => {
@@ -236,13 +234,11 @@ pub fn build(b: *std.Build) !void {
     install_planet.step.dependOn(runtime_install);
     b.getInstallStep().dependOn(&install_planet.step);
 
-    const run_planet_cmd = b.addRunArtifact(planet_exe);
+    const run_planet_cmd = b.addRunFile(b.path(b.fmt("zig-out/bin/{s}{s}", .{ planet_info.name, exe_suffix })));
     run_planet_cmd.step.dependOn(&install_planet.step);
 
     const run_planet_step = b.step("run-planet", "Run the SDL3 planet shader example");
     run_planet_step.dependOn(&run_planet_cmd.step);
-
-    impeller_pkg.linkRuntime(liquid_glass_exe, impeller_dep);
 
     switch (os_tag) {
         .macos => {
@@ -270,7 +266,7 @@ pub fn build(b: *std.Build) !void {
     install_liquid_glass.step.dependOn(runtime_install);
     b.getInstallStep().dependOn(&install_liquid_glass.step);
 
-    const run_liquid_glass_cmd = b.addRunArtifact(liquid_glass_exe);
+    const run_liquid_glass_cmd = b.addRunFile(b.path(b.fmt("zig-out/bin/{s}{s}", .{ liquid_glass_info.name, exe_suffix })));
     run_liquid_glass_cmd.step.dependOn(&install_liquid_glass.step);
 
     const run_liquid_glass_step = b.step("run-liquid-glass", "Run the SDL3 liquid glass example");
