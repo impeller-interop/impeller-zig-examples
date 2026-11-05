@@ -2,7 +2,7 @@
     .name = .zig_impeller_examples,
     .version = "0.1.0",
     .fingerprint = 0xc9e9c5565c6334f1,
-    .minimum_zig_version = "0.17.0",
+    .minimum_zig_version = "0.17.1",
     .dependencies = .{
         .impeller_zig = .{
             .url = "git+https://github.com/impeller-interop/impeller-zig?ref=v0.4.0#1bf850b4bcd647d9e1dcedb6b5ab6ae1bf557ebf",

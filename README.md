@@ -16,7 +16,7 @@ Runnable SDL3 and GLFW examples for [`impeller-zig`](https://github.com/impeller
 
 ## Prerequisites
 
-Install Zig `0.17.0` directly, or use [mise](https://github.com/jdx/mise) to install the toolchain pinned by this repository:
+Install Zig `0.17.1` directly, or use [mise](https://github.com/jdx/mise) to install the toolchain pinned by this repository:
 
 ```bash
 mise install
